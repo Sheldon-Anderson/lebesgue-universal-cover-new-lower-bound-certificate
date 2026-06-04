@@ -15,7 +15,7 @@ A planar set is a universal cover for sets of diameter one if every planar set o
 Brass and Sharifi proved the lower bound `0.832` for the convex problem.  They used three diameter-one test sets: a disk, an equilateral triangle, and a regular pentagon.  After a normalization, the disk is fixed, the triangle is translated, and the pentagon is rotated and translated.  The lower-bound computation studies the area of the convex hull of these three test sets over the normalized placement domain.
 
 <p align="center">
-  <img src="assets/figures/geometry.png" alt="Normalized placement of the three Brass--Sharifi test sets" width="60%">
+  <img src="assets/figures/geometry.png" alt="Normalized placement of the three Brass--Sharifi test sets" width="45%">
 </p>
 
 ## 2. What Brass--Sharifi proved
@@ -53,7 +53,7 @@ admissible domain
 ```
 
 <p align="center">
-  <img src="assets/figures/certificate_flow.png" alt="Certificate flow" width="60%">
+  <img src="assets/figures/certificate_flow.png" alt="Certificate flow" width="35%">
 </p>
 
 ## 5. Stage labels V106--V109
