@@ -1,5 +1,5 @@
 {
-  "schema_version": "bs0832-public-manifest-v0.7",
+  "schema_version": "bs0832-public-manifest-v0.8",
   "file_count": 53,
   "files": [
     {
@@ -39,13 +39,13 @@
     },
     {
       "path": "README.md",
-      "size_bytes": 12122,
-      "sha256": "2996e20bf132669baaedfb4cada6a502690dd378115d42d2c85a41680d769a2a"
+      "size_bytes": 15294,
+      "sha256": "41826deae5157c54575974af757398887738c138f0a95e79a4ff436a6b92f9ae"
     },
     {
       "path": "README.zh-CN.md",
-      "size_bytes": 10760,
-      "sha256": "fe8ea854f94cad3b94ab5c27e226787a92517750376a5f0599c5685f6d665fb6"
+      "size_bytes": 13683,
+      "sha256": "1201609074916fb8e8d2134bf36305d977d7f28f9796b4142969fefa5d37289c"
     },
     {
       "path": "app/__init__.py",

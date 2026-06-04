@@ -14,7 +14,9 @@ A planar set is a universal cover for sets of diameter one if every planar set o
 
 Brass and Sharifi proved the lower bound `0.832` for the convex problem.  They used three diameter-one test sets: a disk, an equilateral triangle, and a regular pentagon.  After a normalization, the disk is fixed, the triangle is translated, and the pentagon is rotated and translated.  The lower-bound computation studies the area of the convex hull of these three test sets over the normalized placement domain.
 
-![Normalized placement of the three Brass--Sharifi test sets](assets/figures/geometry.png)
+<p align="center">
+  <img src="assets/figures/geometry.png" alt="Normalized placement of the three Brass--Sharifi test sets" width="60%">
+</p>
 
 ## 2. What Brass--Sharifi proved
 
@@ -50,18 +52,45 @@ admissible domain
   -> BS0832 certificate statement
 ```
 
-![Certificate flow](assets/figures/certificate_flow.png)
+<p align="center">
+  <img src="assets/figures/certificate_flow.png" alt="Certificate flow" width="60%">
+</p>
 
 ## 5. Stage labels V106--V109
 
 The labels `V106`--`V109` are public stage labels inherited from the development history of this reproduction package.  They are shorthand for versions `v0.10.6`--`v0.10.9`.  They are not mathematical constants and not theorem numbers.
 
-| Stage | Development version | Purpose |
-|---|---:|---|
-| V106 | v0.10.6 | Branch-B domain replay and kernel-closure checks |
-| V107 | v0.10.7 | independent replay and block-hash audit |
-| V108 | v0.10.8 | reproduction closure and proof-obligation binding |
-| V109 | v0.10.9 | final signoff adjudication and author self-review validation |
+<table>
+  <thead>
+    <tr>
+      <th align="center" valign="middle">Stage</th>
+      <th align="center" valign="middle">Development version</th>
+      <th align="center" valign="middle">Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" valign="middle">V106</td>
+      <td align="center" valign="middle">v0.10.6</td>
+      <td align="center" valign="middle">Branch-B domain replay and kernel-closure checks</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle">V107</td>
+      <td align="center" valign="middle">v0.10.7</td>
+      <td align="center" valign="middle">Independent replay and block-hash audit</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle">V108</td>
+      <td align="center" valign="middle">v0.10.8</td>
+      <td align="center" valign="middle">Reproduction closure and proof-obligation binding</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle">V109</td>
+      <td align="center" valign="middle">v0.10.9</td>
+      <td align="center" valign="middle">Final signoff adjudication and author self-review validation</td>
+    </tr>
+  </tbody>
+</table>
 
 ## 6. Repository layout
 
@@ -83,16 +112,48 @@ universal-cover-bs0832-reproduction/
 └── paper/
 ```
 
-| Path | Role |
-|---|---|
-| `assets/figures/` | figures used in the README files |
-| `app/domain/` | core Python logic for reading certificate files, checking integrity, validating signoff data, and running staged replay |
-| `scripts/` | command-line entry points; run them with `python -m scripts.<name>` |
-| `inputs/` | source certificate archives needed for staged reproduction |
-| `certificate/` | final certificate archive, author self-review file, manifest, and checksum list |
-| `certificate/intermediate/` | reference V106--V108 feedback archives used for comparison and reference-signed validation |
-| `paper/` | compiled PDF of the accompanying paper |
-| `runs/` | generated output directory created by scripts; it is not tracked by Git |
+<table>
+  <thead>
+    <tr>
+      <th align="center" valign="middle">Path</th>
+      <th align="center" valign="middle">Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" valign="middle"><code>assets/figures/</code></td>
+      <td align="center" valign="middle">Figures used in the README files</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>app/domain/</code></td>
+      <td align="center" valign="middle">Core Python logic for reading certificate files, checking integrity, validating signoff data, and running staged replay</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>scripts/</code></td>
+      <td align="center" valign="middle">Command-line entry points; run them with <code>python -m scripts.&lt;name&gt;</code></td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>inputs/</code></td>
+      <td align="center" valign="middle">Source certificate archives needed for staged reproduction</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>certificate/</code></td>
+      <td align="center" valign="middle">Final certificate archive, author self-review file, manifest, and checksum list</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>certificate/intermediate/</code></td>
+      <td align="center" valign="middle">Reference V106--V108 feedback archives used for comparison and reference-signed validation</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>paper/</code></td>
+      <td align="center" valign="middle">Compiled PDF of the accompanying paper</td>
+    </tr>
+    <tr>
+      <td align="center" valign="middle"><code>runs/</code></td>
+      <td align="center" valign="middle">Generated output directory created by scripts; it is not tracked by Git</td>
+    </tr>
+  </tbody>
+</table>
 
 ## 7. Required files
 
@@ -244,15 +305,33 @@ Purpose: run V109 on a newly generated V108-style archive.  Unless a matching ne
 
 ## 12. Reference-signed and generated-chain modes
 
-`reference-signed` mode checks the author self-review file against the reference V108 archive bundled in this repository.  This is the mode used by the quick final verification.
+The repository supports two V109 modes.
 
-`generated-chain` mode uses a regenerated V108-style archive.  A regenerated ZIP archive may have a different outer SHA256 hash from the bundled reference archive even when its internal certificate content is equivalent.  Therefore, the bundled signoff is not automatically applied to a newly generated outer ZIP file.
+### Reference-signed mode
+
+Reference-signed mode uses the reference V108 feedback archive included in this repository and checks that the author self-review file is bound to the SHA256 of that reference archive.
+
+In other words, this mode verifies the certificate chain that is already included in the repository and has already been reviewed by the author. This is the mode used by the quick final verification.
+
+### Generated-chain mode
+
+Generated-chain mode uses a V108-style archive regenerated locally by the user.
+
+A regenerated ZIP archive may have a different outer SHA256 even when its internal certificate content is logically equivalent to the reference archive. This can happen because ZIP files may record timestamps, compression settings, file ordering, or other metadata.
+
+For this reason, the author self-review file included in this repository is not treated as a signature on an arbitrary newly generated ZIP archive. It is bound to the reference V108 archive whose SHA256 is recorded in the signoff file.
+
+Thus, generated-chain mode checks that the newly generated certificate chain passes the expected structural and verification checks, but it does not automatically attach the repository's author self-review signoff to that new ZIP archive.
 
 ## 13. Why regenerated ZIP files may differ
 
-ZIP archives store more than file contents.  They may also store timestamps, compression settings, and file ordering.  Rebuilding the same certificate content can therefore produce a ZIP file whose byte-level SHA256 differs from the reference ZIP.
+A regenerated ZIP archive may differ from the bundled reference archive even when the relevant certificate content is equivalent. This is not automatically a reproduction failure.
 
-For staged reproduction, the scripts check the internal certificate content: status files, schema checks, replay counts, boundary audits, and selected hashes.  Stage summaries record both the generated ZIP hash and the reference ZIP hash for traceability.
+**Why can the SHA256 differ?**  A ZIP archive can store metadata such as timestamps, compression settings, and file ordering. Those metadata may change when the archive is rebuilt.
+
+**What does the repository check instead?**  The staged scripts check the internal certificate content: status files, schema checks, replay counts, boundary audits, selected content hashes, and signoff bindings where applicable.
+
+**Why record both hashes?**  Stage summaries record both the generated ZIP hash and the reference ZIP hash for traceability. The outer ZIP hash is useful for identifying files, while the internal checks determine whether the certificate data pass the expected verification conditions.
 
 ## 14. Expected outputs
 
