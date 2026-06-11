@@ -2,16 +2,16 @@
 
 This repository contains a finite certificate and Python verification code for the certified threshold
 
-$$
+```math
 \tau = 0.83201
-$$
+```
 
 in the convex Brass-Sharifi three-test-set lower-bound framework for Lebesgue's universal cover problem.
 The result verified here is the convex certificate consequence
 
-$$
+```math
 \alpha_{\mathrm{cvx}} \ge 0.83201.
-$$
+```
 
 The repository includes the certificate-chain archives needed for local verification. No extra certificate data download is required.
 
@@ -37,11 +37,11 @@ The repository includes the certificate-chain archives needed for local verifica
 
 Let $\mathcal{U}_{\mathrm{cvx}}$ be the class of convex universal covers and set
 
-$$
+```math
 \alpha_{\mathrm{cvx}}
 =
 \inf_{K\in\mathcal{U}_{\mathrm{cvx}}}\mathrm{area}(K).
-$$
+```
 
 The certificate verifies that every normalized placement in the Brass-Sharifi convex three-test-set framework has hull area at least $\tau=0.83201$. The finite-cover implication then gives $\alpha_{\mathrm{cvx}}\ge0.83201$.
 
@@ -67,21 +67,21 @@ If $K\in\mathcal{U}_{\mathrm{cvx}}$, then $K$ contains congruent copies of $C$, 
 
 A normalized placement is
 
-$$
+```math
 v=(\rho,x_3,y_3,x_5,y_5),\qquad
 u_3=(x_3,y_3),\qquad
 u_5=(x_5,y_5).
-$$
+```
 
 With $R_\rho$ denoting rotation by angle $\rho$, set
 
-$$
+```math
 X(v)=C\cup(T+u_3)\cup(R_\rho P_5+u_5),
 \qquad
 H(v)=\mathrm{conv}(X(v)),
 \qquad
 A(v)=\mathrm{area}(H(v)).
-$$
+```
 
 Thus a lower bound for $A(v)$ on the admissible normalized domain gives a lower bound for the area of every convex universal cover.
 
@@ -89,24 +89,24 @@ Thus a lower bound for $A(v)$ on the admissible normalized domain gives a lower 
 
 The certificate verifies a finite family $\mathcal F$ such that
 
-$$
+```math
 \Omega_{\mathrm{adm}}\subseteq\bigcup_{B\in\mathcal F}B.
-$$
+```
 
 For each domain $B\in\mathcal F$, the certificate supplies a local lower bound $L_B$ and verifies
 
-$$
+```math
 A(v)\ge L_B\ge\tau
 \qquad (v\in B).
-$$
+```
 
 ### Step 4. From witness points to witness-domain lower bounds
 
 On the witness domains, the certificate gives points $Q_B(v)\subseteq X(v)$. Therefore
 
-$$
+```math
 W_B(v)=\mathrm{conv}(Q_B(v))\subseteq H(v),
-$$
+```
 
 so $A(v)\ge\mathrm{area}(W_B(v))$. The verifier checks witness containment, a certified cyclic order, and shoelace lower endpoints using outward-rounded interval arithmetic.
 
@@ -114,9 +114,9 @@ so $A(v)\ge\mathrm{area}(W_B(v))$. The verifier checks witness containment, a ce
 
 Since every admissible parameter lies in some $B\in\mathcal F$, the local inequalities imply
 
-$$
+```math
 A(v)\ge0.83201\qquad(v\in\Omega_{\mathrm{adm}}).
-$$
+```
 
 The convex universal-cover consequence is $\alpha_{\mathrm{cvx}}\ge0.83201$.
 
