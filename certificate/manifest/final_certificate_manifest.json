@@ -1,0 +1,25 @@
+{
+  "schema": "ucbs-final-certificate-manifest-v1",
+  "artifacts": [
+    {
+      "path": "certificate/final_chain/construction_audit_feedback.zip",
+      "sha256": "ded1d29deb13d3cc2203955d6f30a1cfdbbbc267fca9deedc3ba0ae5882dacef",
+      "size_bytes": 43713
+    },
+    {
+      "path": "certificate/final_chain/final_adjudication_feedback.zip",
+      "sha256": "c75291b2057e1cb7f1c0c3fe17493137ff6fc781af2b5c0ac5036ac2804ab037",
+      "size_bytes": 23607
+    },
+    {
+      "path": "certificate/final_chain/per_record_evidence_feedback.zip",
+      "sha256": "99960e1b5e6ae4bbaed2ef6716b50384360a28a827ea2a99fe96ad58cedf7032",
+      "size_bytes": 53173
+    },
+    {
+      "path": "certificate/final_chain/witness_construction_feedback.zip",
+      "sha256": "1c576044d65a770301a362d3aa7e0427024c597803734345d9659221f03eb142",
+      "size_bytes": 102883
+    }
+  ]
+}

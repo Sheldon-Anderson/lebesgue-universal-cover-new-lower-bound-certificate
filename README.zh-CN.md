@@ -1,712 +1,438 @@
-# Brass-Sharifi 0.832 下界的可复现证书包
+# Lebesgue 万有覆盖问题 - 认证下界证书
 
-本仓库给出 Lebesgue 万有覆盖问题**凸版本**中 Brass-Sharifi 0.832 下界的公开复现证书包。这里复现的是已有下界
+本仓库包含一个有限证书（finite certificate）和一套 Python 验证程序，用于在凸 Brass-Sharifi 三测试集下界框架中验证阈值
 
-```math
-\alpha_{\mathrm{cvx}} \geq 0.832.
-```
+$$
+\tau = 0.83201.
+$$
 
-本仓库的定位是 artifact 和 verification package。它不提出新的数值下界，也不声称已经完成 proof assistant 级别的形式化证明或独立外部审查。它所做的是把 Brass-Sharifi 计算辅助证明中的计算部分整理为一个有限、可读取、可重放、可审计的证书对象：源证书包、adaptive ledger、terminal-route replay、三类局部下界证书、紧凑完整性审计，以及最终 proof-obligation / signoff 层。
+验证通过后得到的凸版本结论是
 
-配套论文 PDF 放在 `paper/` 目录下。
+$$
+\alpha_{\mathrm{cvx}} \ge 0.83201.
+$$
 
----
+本仓库已经包含验证所需的证书数据，位于 `certificate/final_chain/`。不需要额外下载证书归档。
 
-## 1. 项目概览
+## 目录
 
-本仓库有两条主线。
+- [背景：Lebesgue 万有覆盖问题是什么](#1-背景lebesgue-万有覆盖问题是什么)
+- [这个仓库验证什么](#2-这个仓库验证什么)
+- [术语表](#3-术语表)
+- [证明思路](#4-证明思路)
+- [这个仓库包含哪些内容](#5-这个仓库包含哪些内容)
+- [快速开始](#6-快速开始)
+- [安装](#7-安装)
+- [主证书验证](#8-主证书验证)
+- [检查公开仓库](#9-检查公开仓库)
+- [完整证书链 replay](#10-完整证书链-replay)
+- [高级组件 replay 命令](#11-高级组件-replay-命令)
+- [输出文件怎么看](#12-输出文件怎么看)
+- [SHA256 策略](#13-sha256-策略)
+- [故障排除](#14-故障排除)
+- [常见问题](#15-常见问题)
+- [论文、引用和许可](#16-论文引用和许可)
 
-第一条是数学逻辑主线：把 Brass-Sharifi 的三测试集摆放问题写成归一化参数空间上的面积函数 $`A(v)`$，再通过 Branch-B 域覆盖、terminal route 局部证书和有限覆盖命题，推出凸万有覆盖下界。
+## 1. 背景：Lebesgue 万有覆盖问题是什么
 
-第二条是复现工程主线：仓库包含 reference certificate artifacts、certificate-artifact SHA256 gate、V106-V109 分阶段 replay 脚本，以及快速最终验证脚本。快速验证检查随仓库发布的 signed-candidate 证书包；完整分阶段 replay 则用于重新生成和审计 V106-V109 的公开链条。
+Lebesgue 万有覆盖问题研究：平面中面积尽可能小的集合，是否能包含每一个直径为 1 的平面集合的一个全等副本。
 
----
+本文档只讨论凸版本。也就是说，覆盖集合 $K$ 要求是凸集。记凸万有覆盖集合类为 $\mathcal U_{\mathrm{cvx}}$，并定义
 
-## 2. 问题背景：Lebesgue 万有覆盖问题的凸版本
-
-### 2.1 什么是万有覆盖问题？
-
-Lebesgue 万有覆盖问题问的是：平面上是否存在面积尽可能小的集合，使得每一个直径为 1 的平面集合都可以经过刚体运动放入其中。
-
-### 2.2 本仓库只讨论凸版本
-
-本仓库只讨论**凸版本**。也就是说，覆盖集合 $`K`$ 还要求是凸集。记
-
-```math
-\mathcal{U}_{\mathrm{cvx}}
-=
-\left\{
-K \subset \mathbb{R}^{2}:
-K \text{ 是凸集，且包含每个直径为 }1\text{ 的平面集合的某个合同副本}
-\right\}.
-```
-
-定义
-
-```math
+$$
 \alpha_{\mathrm{cvx}}
 =
-\inf_{K\in\mathcal{U}_{\mathrm{cvx}}}\mathrm{area}(K).
-```
+\inf_{K\in\mathcal U_{\mathrm{cvx}}}\operatorname{area}(K).
+$$
 
-### 2.3 凸版本下界与本项目的关系
+本仓库验证的是 $\alpha_{\mathrm{cvx}}\ge0.83201$ 这个凸版本证书结论。
 
-Brass 和 Sharifi 证明了凸版本的 0.832 下界。本仓库围绕的正是这个既有下界：不是改进它，而是把其中的计算部分整理为一个可以公开检查的有限证书包。
+## 2. 这个仓库验证什么
 
----
+仓库验证的是：在 Brass-Sharifi 的凸三测试集框架中，归一化配置域上的 hull 面积函数满足
 
-## 3. Brass-Sharifi 的三测试集归一化问题
+$$
+A(v)\ge 0.83201
+\qquad(v\in\Omega_{\mathrm{adm}}).
+$$
 
-### 3.1 三个直径为 1 的测试集
+这里 $\Omega_{\mathrm{adm}}$ 是容许域（admissible domain），即 Brass-Sharifi 归一化之后的参数域。
 
-Brass-Sharifi 的计算使用三个直径为 1 的测试集：
+本仓库不声称解决非凸版本问题，不声称完成 proof assistant 形式化，也不声称已经完成外部独立验证。
 
-```math
-C = \text{直径为 }1\text{ 的圆盘},
+## 3. 术语表
+
+| 术语 | English | 说明 |
+|---|---|---|
+| 凸万有覆盖集合类 | convex universal cover class | 只讨论凸覆盖集合。 |
+| 容许域 | admissible domain | Brass-Sharifi 归一化后的参数域，记为 $\Omega_{\mathrm{adm}}$。 |
+| 有限证书 | finite certificate | 由有限个可检查记录组成的证明对象。 |
+| 证书验证 | certificate verification | 读取证书数据并检查关键有限条件。 |
+| 证书链 replay | certificate-chain replay | 逐层重放四个证书组件的检查。 |
+| 逐记录证据 | per-record evidence | 每个局部记录都对应到可检查证据，而不只依赖汇总统计。 |
+| witness construction | witness construction | 用内接见证多边形处理 witness domains。 |
+| 向外舍入区间算术 | outward-rounded interval arithmetic | 区间端点向外舍入，保证记录的下界是安全下界。 |
+| 鞋带公式 | shoelace formula | 用顶点循环顺序计算多边形面积的公式。 |
+
+## 4. 证明思路
+
+### 第一步：从凸万有覆盖集合得到三测试集凸包
+
+若 $K\in\mathcal U_{\mathrm{cvx}}$，则 $K$ 包含圆盘 $C$、等边三角形 $T$ 和正五边形 $P_5$ 的全等副本。因为 $K$ 是凸的，所以它包含这三个副本的凸包。
+
+### 第二步：用归一化参数描述凸包面积
+
+归一化配置写成
+
+$$
+v=(\rho,x_3,y_3,x_5,y_5),
 \qquad
-T = \text{直径为 }1\text{ 的等边三角形},
+u_3=(x_3,y_3),
 \qquad
-P_{5} = \text{直径为 }1\text{ 的正五边形}.
-```
+u_5=(x_5,y_5).
+$$
 
-任意凸万有覆盖 $`K`$ 必须包含这三个测试集的某些合同副本。由于 $`K`$ 是凸集，它也必须包含这些副本的凸包。因此，如果能证明这三个测试集在所有允许相对摆放下的凸包面积都至少为 0.832，就能推出 $`\mathrm{area}(K)\geq 0.832`$，从而得到 $`\alpha_{\mathrm{cvx}}\geq 0.832`$。
+令 $R_\rho$ 表示角度 $\rho$ 的旋转，并定义
 
-### 3.2 归一化摆放参数
-
-归一化后，圆盘固定在原点，三角形方向固定，只允许平移；正五边形允许旋转和平移。一个归一化摆放由五个参数记录：
-
-```math
-v=(\rho,x_{3},y_{3},x_{5},y_{5}).
-```
-
-记
-
-```math
-u_{3}=(x_{3},y_{3}),
+$$
+X(v)=C\cup(T+u_3)\cup(R_\rho P_5+u_5),
 \qquad
-u_{5}=(x_{5},y_{5}).
-```
-
-这里 $`u_{3}`$ 是三角形的平移向量，$`\rho`$ 是正五边形的旋转角，$`u_{5}`$ 是正五边形的平移向量。
-
-### 3.3 凸包面积函数
-
-若 $`R_{\rho}`$ 表示旋转角为 $`\rho`$ 的旋转，则定义
-
-```math
-H(v)=\mathrm{conv}\left(C\cup(T+u_{3})\cup(R_{\rho} P_{5}+u_{5})\right),
-```
-
-以及
-
-```math
-A(v)=\mathrm{area}(H(v)).
-```
-
-证书所对应的摆放层面结论是：对于证书模型中的每一个允许归一化摆放 $`v`$，都有
-
-```math
-A(v)\geq 0.832.
-```
-
-<p align="center">
-  <img src="assets/figures/geometry.png" alt="三个 Brass-Sharifi 测试集的归一化摆放" width="45%">
-</p>
-
-### 3.4 从摆放下界到凸万有覆盖下界
-
-如果摆放层面下界对所有 admissible normalized placements 成立，那么任意凸万有覆盖 $`K`$ 的面积也至少为 0.832。原因是 $`K`$ 包含 $`C`$、$`T`$、$`P_{5}`$ 的某些合同副本，而凸性保证 $`K`$ 还包含这些副本的凸包。
-
----
-
-## 4. 本仓库的目标与非目标
-
-### 4.1 本仓库复现什么？
-
-本仓库的目标是把 Brass-Sharifi 的 0.832 计算整理为可以公开检查的有限证书包，并提供用于检查该证书包的 Python 脚本。
-
-### 4.2 本仓库不声称什么？
-
-本仓库不声称以下内容：
-
-- 不声称得到比 0.832 更强的数值下界；
-- 不声称处理非凸版本的万有覆盖问题；
-- 不声称已经完成 Lean、Coq、Isabelle 等系统中的形式化证明；
-- 不声称已经经过独立外部审查；
-- 不声称已经闭合下面所说的 Branch-A 符号化路线。
-
-### 4.3 为什么 `theorem_ready=false` 是预期状态？
-
-最终验证输出中的
-
-```text
-theorem_ready = false
-```
-
-是预期结果，不是错误。它表示本仓库是一个作者自审的 signed-candidate 证书包，而不是一个已经由 proof assistant 完整验证的定理包。
-
----
-
-## 5. 本仓库相对于 Brass-Sharifi 原工作的补充
-
-### 5.1 证明组织层面的补充
-
-数学下界本身来自 Brass-Sharifi。这个仓库没有改变下界的数值，也没有替代原论文的数学贡献。它的补充主要在于把计算辅助证明拆成几个明确的逻辑对象：
-
-1. 三测试集摆放问题中的面积函数 $`A(v)`$；
-2. 归一化摆放域的覆盖关系；
-3. 每个 terminal route 上的局部下界证书；
-4. 从局部证书推出全局摆放下界的有限覆盖命题；
-5. 从摆放下界推出凸万有覆盖下界的凸性推论；
-6. 明确列出的 proof obligations，即 OB-A 到 OB-F。
-
-### 5.2 编程实践层面的补充
-
-在编程实践和 artifact 组织层面，本仓库补上了：
-
-1. 有限 adaptive parent-child ledger；
-2. terminal-route replay 数据；
-3. directed interval、local tensor、$`h=0.004`$ bridge 三类局部证书；
-4. 大表的 compact block-hash audit；
-5. proof-obligation ledger；
-6. 防止越界声称的 proof-boundary audit；
-7. final signoff schema 与作者自审 JSON；
-8. reference-signed 与 generated-chain 两种验证模式。
-
-### 5.3 与原始 0.832 数值下界的关系
-
-因此，本仓库的贡献不是“发现新的几何不等式”，而是把 Brass-Sharifi 计算组织为一个可以重放、审计和进一步形式化的有限证书对象。数值结论仍然是 Brass-Sharifi 的 0.832 凸下界。
-
----
-
-## 6. 有限证书是什么意思？
-
-### 6.1 连续问题如何被记录为有限对象
-
-这里的“有限证书”不是说原问题本身变成了有限问题，而是说：用于支持 0.832 下界的连续摆放域，被记录为有限个机器可读取的对象。
-
-### 6.2 adaptive ledger、terminal routes 与 local certificates
-
-具体来说，证书包含：
-
-1. 有限条 parent-child 细分记录；
-2. 有限个 terminal route；
-3. 有限条 directed interval / tensor / bridge 证书记录；
-4. 有限个 row-count 和 block-hash 完整性记录；
-5. 有限条 proof obligation；
-6. 一个最终 signed-candidate signoff 记录。
-
-### 6.3 verifier 检查什么、不检查什么？
-
-验证程序不重新搜索整个连续空间。它读取这些已经生成的有限记录，检查它们的结构、哈希、局部余量、route 分配和证明边界，然后把这些记录汇总到最终证书结论中。
-
----
-
-## 7. Branch-A 与 Branch-B 的说明
-
-### 7.1 Branch-A：本仓库不声称闭合的符号化路线
-
-Branch-A 和 Branch-B 是本复现项目内部使用的证书路线标签，不应理解为 Brass-Sharifi 原论文中的术语。
-
-Branch-A 指一种符号化、闭式的 domain-reduction 路线。本仓库不声称这条路线已经闭合。
-
-### 7.2 Branch-B：本仓库采用的扩大域重放路线
-
-Branch-B 指本仓库实际采用的扩大域重放路线。它把需要考虑的 admissible normalized placement domain 放入一个记录好的扩大域 $`\Omega_{B}`$，然后用有限个 terminal routes 覆盖这个扩大域。
-
-### 7.3 域包含关系
-
-本仓库所有公开证书结论都走 Branch-B，而不是 Branch-A。证书层面的域关系是
-
-```math
-\Omega_{\mathrm{adm}} \subseteq \Omega_{B}
-\subseteq \bigcup_{r\in\mathcal{R}}\Omega_{r}.
-```
-
-这里 $`\Omega_{\mathrm{adm}}`$ 是证书模型中记录的归一化 admissible domain，$`\Omega_{B}`$ 是扩大后的 Branch-B replay domain，$`\Omega_{r}`$ 是第 $`r`$ 个 terminal route 所代表的局部区域。
-
-### 7.4 为什么 Branch-B 是保守路线？
-
-采用 Branch-B 是保守的：如果在较大的 $`\Omega_{B}`$ 上都能验证 $`A(v)\geq 0.832`$，那么在其子集 $`\Omega_{\mathrm{adm}}`$ 上当然也成立。
-
-这个说明很重要。仓库采用的是“记录好的扩大域 + 有限 terminal-route replay”的证书路线，而不是声称独立完成了从原始未归一化摆放空间到 reduced domain 的完整符号化闭合证明。
-
----
-
-## 8. 局部证书族
-
-### 8.1 统一的 post-guard 接口
-
-对于每个 terminal route $`r`$，局部验证器记录一个扣除 guard 之后的下界 $`L^{\mathrm{post}}_{r}`$，满足
-
-```math
-L^{\mathrm{post}}_{r} \leq \inf_{w\in\Omega_{r}} A(w),
+H(v)=\operatorname{conv}X(v),
 \qquad
-L^{\mathrm{post}}_{r} - 0.832 \geq 10^{-7}.
-```
+A(v)=\operatorname{area}(H(v)).
+$$
 
-因此，对任意 $`v\in\Omega_{r}`$，有
+因此，只要能在容许域 $\Omega_{\mathrm{adm}}$ 上证明 $A(v)$ 的统一下界，就能得到凸万有覆盖集合的面积下界。
 
-```math
-A(v)
-\geq \inf_{w\in\Omega_{r}}A(w)
-\geq L^{\mathrm{post}}_{r}
-\geq 0.832+10^{-7}
->0.832.
-```
+### 第三步：用有限覆盖把全域问题化为局部检查
 
-三类局部证书内部机制不同，但进入最终聚合时都通过这个 route-level lower-bound interface。
+证书验证一个有限覆盖族 $\mathcal F$，满足
 
-### 8.2 Directed interval certificates
+$$
+\Omega_{\mathrm{adm}}\subseteq\bigcup_{B\in\mathcal F}B.
+$$
 
-Directed interval family 是主要的局部证书族。它覆盖 338,367 个 terminal routes，使用 41,261 条 directed rows。扣除 guard 后，它记录的最小余量约为
+对每个覆盖单元 $B\in\mathcal F$，证书给出局部下界 $L_B$，并验证
 
-```math
-4.307276422\times 10^{-6}.
-```
+$$
+A(v)\ge L_B\ge\tau
+\qquad(v\in B).
+$$
 
-### 8.3 Local tensor certificates
+### 第四步：用 witness construction 处理 witness domains
 
-Local tensor family 处理 18,380 个 terminal routes。它由 8,751 个 tensor members 和 125 个 tensor packages 支撑。扣除 guard 后，它记录的最小余量约为
+在 witness domains 上，证书给出一组见证点 $Q_B(v)\subseteq X(v)$。于是
 
-```math
-2.318262102\times 10^{-5}.
-```
+$$
+W_B(v)=\operatorname{conv}Q_B(v)\subseteq H(v),
+$$
 
-### 8.4 $`h=0.004`$ bridge
+所以 $A(v)\ge\operatorname{area}(W_B(v))$。验证程序再用向外舍入区间算术检查循环顺序和鞋带公式面积下界。
 
-$`h=0.004`$ bridge 覆盖剩余的 69 个 terminal routes，并使用 282 条 frozen bridge witness rows。在最终聚合中，它作为一个独立 bridge component 处理，而不是被并入 directed interval 或 local tensor family。
+### 第五步：合并所有局部下界
 
-### 8.5 三类局部证书如何进入最终聚合
+因为每个 $v\in\Omega_{\mathrm{adm}}$ 都落在某个 $B\in\mathcal F$ 中，所以所有局部下界合并后得到
 
-每个 terminal route 都被分配给且只分配给一个局部证书族。只要 route $`r`$ 的局部记录被接受，最终聚合只需要使用下面的 route-level 结论：
+$$
+A(v)\ge0.83201
+\qquad(v\in\Omega_{\mathrm{adm}}),
+$$
 
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{r}.
-```
+进而得到
 
----
+$$
+\alpha_{\mathrm{cvx}}\ge0.83201.
+$$
 
-## 9. 证书定理与凸万有覆盖推论
-
-### 9.1 有限覆盖命题
-
-假设有域包含关系
-
-```math
-\Omega_{\mathrm{adm}} \subseteq \Omega_{B}
-\subseteq \bigcup_{r\in\mathcal{R}}\Omega_{r},
-```
-
-并且每个 terminal route 上都有局部下界
-
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{r}.
-```
-
-那么对所有 admissible normalized placements，都有
-
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{\mathrm{adm}}.
-```
-
-理由很直接：如果 $`v\in\Omega_{\mathrm{adm}}`$，那么由包含关系可知 $`v\in\Omega_{B}`$，进而 $`v`$ 落在至少一个 terminal-route domain $`\Omega_{r}`$ 中。该 route 对应的局部证书给出 $`A(v)\geq 0.832`$。
-
-### 9.2 BS0832 certificate theorem
-
-BS0832 certificate theorem 的含义是：在本文和本仓库规定的 verifier / proof-obligation 模型下，证书被接受会提供有限覆盖命题所需的两个输入：
-
-1. Branch-B domain relation；
-2. 每个 terminal route 上的 local lower-bound certificate。
-
-因此可以推出摆放层面的结论：
-
-```math
-A(v)\geq 0.832
-```
-
-对证书域模型中的所有 admissible normalized placements 成立。
-
-### 9.3 Convex universal-cover consequence
-
-若 $`K`$ 是凸万有覆盖，则 $`K`$ 必须包含 $`C`$、$`T`$、$`P_{5}`$ 的某些合同副本。由于 $`K`$ 是凸集，它也包含这些副本的凸包。归一化后，该凸包面积就是某个 $`A(v)`$。因此
-
-```math
-\mathrm{area}(K)\geq A(v)\geq 0.832.
-```
-
-对所有凸万有覆盖取下确界，得到
-
-```math
-\alpha_{\mathrm{cvx}}\geq 0.832.
-```
-
-### 9.4 逻辑依赖关系
-
-<p align="center">
-  <img src="assets/figures/certificate_flow.png" alt="证书结构示意图" width="35%">
-</p>
-
-逻辑顺序是：Branch-B domain relation 与 local route certificates 提供有限覆盖命题的输入；certificate theorem 在 verifier 模型下保证这些输入由有限证书给出；最后再由凸性推出 convex universal-cover consequence。
-
----
-
-## 10. 证书数据与主要计数
-
-### 10.1 adaptive ledger 与 terminal routes
-
-| 组件 | 行数 / 个数 | 作用 |
-|---|---:|---|
-| Adaptive parent-child ledger | 379,192 | 有限细分树 |
-| Adaptive terminal routes | 356,816 | terminal route 闭合 |
-
-### 10.2 三类 route family 的数量
-
-| Route family | Terminal routes |
-|---|---:|
-| Directed interval certificates | 338,367 |
-| Local tensor certificates | 18,380 |
-| $`h=0.004`$ bridge | 69 |
-| **合计** | **356,816** |
-
-### 10.3 supporting certificate tables
-
-| Supporting table | 行数 / 个数 |
-|---|---:|
-| Directed interval rows | 41,261 |
-| Local tensor members | 8,751 |
-| Local tensor packages | 125 |
-| $`h=0.004`$ bridge witnesses | 282 |
-
-### 10.4 post-guard margin 与接受阈值
-
-| Family | 0.832 之上的最小 post-guard margin |
-|---|---:|
-| Directed interval | 约 $`4.307276422\times 10^{-6}`$ |
-| Local tensor | 约 $`2.318262102\times 10^{-5}`$ |
-| Verifier acceptance threshold | $`10^{-7}`$ |
-
-$`h=0.004`$ bridge 对它负责的 residual route set 通过零违规检查。
-
----
-
-## 11. V106-V109 阶段标签说明
-
-V106-V109 是本证书包开发历史中继承下来的公开阶段标签，不是数学常数，也不是定理编号。
-
-| Stage | 作用 |
-|---|---|
-| V106 | Branch-B domain replay 和 final kernel-closure checks |
-| V107 | independent replay、release-candidate checks 和 compact block-hash audit |
-| V108 | theorem-level reproduction closure attempt 和 proof-obligation binding |
-| V109 | final signoff adjudication 和 theorem-ready gate |
-
----
-
-## 12. 仓库目录结构
-
-```text
-universal-cover-bs0832-reproduction/
-├── README.md
-├── README.zh-CN.md
-├── ARTIFACTS.md
-├── CERTIFICATE.md
-├── EXPECTED_OUTPUTS.md
-├── CITATION.cff
-├── assets/figures/
-├── app/domain/
-├── scripts/
-├── inputs/
-├── certificate/
-│   └── intermediate/
-└── paper/
-```
+## 5. 这个仓库包含哪些内容
 
 | 路径 | 作用 |
 |---|---|
-| `inputs/` | 分阶段复现所需的源证书包。 |
-| `certificate/` | 最终 signed-candidate 证书、作者自审 signoff、manifest 和 checksum 文件。 |
-| `certificate/intermediate/` | reference-signed 路线使用的 V106-V108 参考反馈包。 |
-| `app/domain/` | 证书检查和分阶段 replay 的核心 Python 代码。 |
-| `scripts/` | 命令行入口，使用 `python -m scripts.<name>` 运行。 |
-| `paper/` | 配套论文 PDF。 |
-| `assets/figures/` | README 使用的图。 |
-| `runs/` | 脚本运行后生成的本地输出目录，Git 不跟踪。 |
+| `certificate/final_chain/` | 四个证书链归档，是主验证的数据输入。 |
+| `certificate/manifest/` | 证书归档的 SHA256 清单。 |
+| `certificate/public/` | 人类可读的证书状态和声明边界说明。 |
+| `ucbs/certificate/` | 读取证书归档并 replay 关键检查的 Python 模块。 |
+| `ucbs/verification/` | 仓库发布检查模块，例如 README 数学渲染、claim boundary、hash 检查。 |
+| `scripts/` | 公开命令行入口。 |
+| `docs/` | 输出说明、复现说明、FAQ 和数据策略。 |
+| `paper/` | 编译后的论文预览。 |
 
-仓库中不包含 `.github/workflows/` 目录。验证以本地命令为准，不依赖 GitHub Actions。
-
----
-
-## 13. manifest / SHA256 策略
-
-### 13.1 为什么只哈希 certificate artifacts？
-
-`certificate/MANIFEST.json` 和 `certificate/SHA256SUMS.txt` 只描述**证书 artifact**，不再描述整个 GitHub 仓库。这样做的目的很直接：README、论文、图、代码注释和环境说明可以继续改进，而不会改变已经发布的证书数据本身。
-
-### 13.2 哪些文件进入 SHA256 gate
-
-纳入证书哈希检查的是：
+四个证书链归档是：
 
 ```text
-inputs/*.zip
-certificate/intermediate/*.zip
-certificate/feedback_v109_signed_author_self_review.zip
-certificate/reviewer_signoff_v109.json
+certificate/final_chain/per_record_evidence_feedback.zip
+certificate/final_chain/construction_audit_feedback.zip
+certificate/final_chain/witness_construction_feedback.zip
+certificate/final_chain/final_adjudication_feedback.zip
 ```
 
-### 13.3 哪些文件不进入 SHA256 gate
-
-以下文件不纳入证书 artifact SHA gate：
-
-```text
-README.md
-README.zh-CN.md
-ARTIFACTS.md
-CERTIFICATE.md
-EXPECTED_OUTPUTS.md
-paper/**
-assets/**
-app/**
-scripts/**
-requirements.txt
-environment.yml
-pyproject.toml
-CITATION.cff
-```
-
-### 13.4 README、论文和源码注释为什么不影响证书哈希？
-
-最终验证脚本仍然要求源证书包、参考中间证书包、最终证书包、signoff JSON、`MANIFEST.json` 和 `SHA256SUMS.txt` 存在，并检查 `MANIFEST.json` 与 `SHA256SUMS.txt` 描述的是同一组证书 artifact。
-
-但 README、论文、图片、Python 注释和环境说明不是证书数据本身。因此这些说明性文件可以继续改进，而不影响证书 artifact 的哈希检查。
-
----
-
-## 14. 环境安装
-
-### 14.1 使用 pip
-
-命令：
+## 6. 快速开始
 
 ```bash
 python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+python scripts/verify_certificate.py --root . --log-level INFO
+python scripts/check_repository.py --root . --log-level INFO
 ```
 
-作用：安装 verifier 和 staged replay 脚本所需的 Python 依赖。
-
-预期结果：命令正常退出，随后可以导入 `app/` 和 `scripts/` 下的模块。
-
-### 14.2 使用 conda
-
-命令：
-
-```bash
-conda env create -f environment.yml
-conda activate bs0832-reproduction
-```
-
-作用：根据仓库中的环境文件创建并激活隔离环境。
-
-预期结果：环境创建成功，后续可以在该环境中运行 `python -m scripts...` 命令。
-
----
-
-## 15. 快速最终验证：`run_final_verification`
-
-### 15.1 命令
-
-```bash
-python -m scripts.run_final_verification --root . --log-level INFO
-```
-
-### 15.2 作用
-
-该命令检查随仓库发布的 reference certificate artifacts、certificate-only manifest/SHA256 gate、最终 signed-candidate archive，以及结构化的作者自审 signoff。
-
-### 15.3 输出位置
+主证书验证成功后，重点看：
 
 ```text
-runs/final_verification/final_verification_summary.json
-runs/final_verification/final_verification.log
+runs/certificate_verification/status/certificate_verification.status.json
+runs/certificate_verification/log/certificate_verification.log
 ```
 
-### 15.4 关键预期字段
+期望核心字段：
 
-成功运行时，summary JSON 中应包含：
+```json
+{
+  "status": "passed",
+  "certificate_verified": true,
+  "threshold_proved": true,
+  "certified_threshold": "0.83201",
+  "failed_component_count": 0
+}
+```
+
+## 7. 安装
+
+环境要求：
+
+- Python 3.10 或更高版本。
+- 依赖见 `requirements.txt`。
+- 不需要 GPU。
+
+推荐使用虚拟环境：
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+```
+
+Windows PowerShell 中激活虚拟环境：
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+## 8. 主证书验证
+
+命令：
+
+```bash
+python scripts/verify_certificate.py --root . --log-level INFO
+```
+
+作用：
+
+- 读取 `certificate/final_chain/` 中四个归档。
+- replay 逐记录证据、construction audit、witness construction 和 final adjudication 四个组件。
+- 输出详细日志、诊断 CSV 和状态 JSON。
+
+输出：
 
 ```text
-status = success
-bs0832_final_repository_verification_passed = true
-required_file_count = 14
-sha256_checked_file_count = 12
-theorem_ready_signed_candidate = true
-theorem_ready = false
-proof_boundary_violations = 0
+runs/certificate_verification/status/certificate_verification.status.json
+runs/certificate_verification/diagnostics/component_checks.csv
+runs/certificate_verification/diagnostics/failed_component_checks.csv
+runs/certificate_verification/log/certificate_verification.log
+runs/certificate_verification/certificate_verification_feedback.zip
 ```
 
-其中 `theorem_ready=false` 是预期状态，表示仓库保持 signed-candidate certificate package 的边界，而不是声称已经完成 proof-assistant formalization。
+## 9. 检查公开仓库
 
----
-
-## 16. 完整分阶段复现：`run_all_stages`
-
-### 16.1 命令
+命令：
 
 ```bash
-python -m scripts.run_all_stages --root . --log-level INFO
+python scripts/check_repository.py --root . --log-level INFO
 ```
 
-### 16.2 作用
+作用：
 
-该命令依次运行公开的 V106、V107、V108、V109 reference-signed 和 V109 generated-chain。
+- 检查 Python 代码能否编译。
+- 检查仓库目录结构和空目录。
+- 检查 README 数学公式是否能在 GitHub 上渲染。
+- 检查公开叙事和声明边界。
+- 检查证书归档 SHA256。
+- 内部运行主证书验证。
 
-### 16.3 输出位置
+输出：
 
 ```text
-runs/stage_all/stage_chain_summary.json
-runs/stage_all/public_stage_chain.log
-runs/stage_v106/
-runs/stage_v107/
-runs/stage_v108/
-runs/stage_v109_reference/
-runs/stage_v109_generated/
+runs/repository_check/status/repository_check.status.json
+runs/repository_check/diagnostics/failed_checks.csv
+runs/repository_check/diagnostics/readme_math.csv
+runs/repository_check/diagnostics/narrative_lint.csv
+runs/repository_check/diagnostics/claim_boundary.csv
+runs/repository_check/diagnostics/artifact_hashes.csv
+runs/repository_check/log/repository_check.log
+runs/repository_check/repository_check_feedback.zip
 ```
 
-### 16.4 关键预期字段
-
-成功运行时，`stage_chain_summary.json` 中顶层应出现：
+因为它会内部运行主证书验证，所以也会生成：
 
 ```text
-status = success
+runs/certificate_verification/
 ```
 
-并且每个 stage entry 都应报告成功。
-
-### 16.5 为什么 V107 通常是最耗时阶段？
-
-V107 执行最大的 independent replay 和 compact block-hash audit 检查，因此通常是公开链条中耗时最长的阶段。
-
----
-
-## 17. 单阶段运行命令
-
-### 17.1 V106
+## 10. 完整证书链 replay
 
 命令：
 
 ```bash
-python -m scripts.run_stage_v106 --root . --log-level INFO
+python scripts/replay_certificate_chain.py --root . --log-level INFO
 ```
 
-作用：重放 Branch-B domain records、adaptive ledger closure 和 kernel-closure checks。
+作用：只 replay 四个证书链组件，不检查 README、目录结构或发布文案。
 
-预期输出：`runs/stage_v106/` 下生成 V106 feedback ZIP、summary JSON 和 log 文件。
+输出：
 
-### 17.2 V107
+```text
+runs/certificate_chain_replay/status/certificate_chain_replay.status.json
+runs/certificate_chain_replay/diagnostics/component_checks.csv
+runs/certificate_chain_replay/log/certificate_chain_replay.log
+runs/certificate_chain_replay/certificate_chain_replay_feedback.zip
+```
 
-命令：
+期望字段：
+
+```json
+{
+  "status": "passed",
+  "per_record_evidence_passed": true,
+  "construction_audit_passed": true,
+  "witness_construction_passed": true,
+  "final_adjudication_passed": true,
+  "failed_component_count": 0
+}
+```
+
+## 11. 高级组件 replay 命令
+
+这些命令用于单独检查某个证书组件。它们不会替代主证书验证。
+
+### 11.1 逐记录证据
 
 ```bash
-python -m scripts.run_stage_v107 --root . --log-level INFO
+python scripts/replay_per_record_evidence.py --root . --log-level INFO
 ```
 
-作用：执行 independent replay checks 和大表 compact integrity audits。
+读取 `per_record_evidence_feedback.zip`，检查 supporting local records 是否有逐记录证据。期望 `status = passed`、`failed_rows = 0`。
 
-预期输出：`runs/stage_v107/` 下生成 V107 feedback ZIP、summary JSON 和 log 文件。
-
-### 17.3 V108
-
-命令：
+### 11.2 Construction audit
 
 ```bash
-python -m scripts.run_stage_v108 --root . --log-level INFO
+python scripts/replay_construction_audit.py --root . --log-level INFO
 ```
 
-作用：检查 theorem-level reproduction closure、proof-obligation binding 和 scope records。
+读取 `construction_audit_feedback.zip`，检查 construction-stage 归档、rounding rows 和 integrity rows。期望 `status = passed`、`construction_audit_passed = true`。
 
-预期输出：`runs/stage_v108/` 下生成 V108 feedback ZIP、summary JSON 和 log 文件。
-
-### 17.4 V109 reference-signed
-
-命令：
+### 11.3 Witness construction
 
 ```bash
-python -m scripts.run_stage_v109 --root . --mode reference-signed --log-level INFO
+python scripts/replay_witness_construction.py --root . --log-level INFO
 ```
 
-作用：使用随仓库发布的 reference V108 archive 和 author self-review signoff 进行最终签收验证。
+读取 `witness_construction_feedback.zip`，检查 witness containment、accepted terminal subdomains、orientation rows 和 shoelace lower bounds。期望 `status = passed`、`witness_construction_passed = true`、`accepted_terminal_subdomains = 140`。
 
-预期输出：`runs/stage_v109_reference/` 下生成 V109 summary 和 log。
-
-### 17.5 V109 generated-chain
-
-命令：
+### 11.4 Final adjudication
 
 ```bash
-python -m scripts.run_stage_v109 --root . --mode generated-chain \
-  --v108-feedback-zip runs/stage_v108/feedback_v108_bs0832_theorem_level_reproduction_closure_attempt_and_final_signoff_package.zip \
-  --log-level INFO
+python scripts/replay_final_adjudication.py --root . --log-level INFO
 ```
 
-作用：对本机新生成的 V108-style archive 运行 V109 逻辑。
+读取 `final_adjudication_feedback.zip`，检查最终有限证书条件、proof obligations、claim-boundary rows 和 scope flags。期望 `status = passed`、`threshold_proved = true`。
 
-预期输出：`runs/stage_v109_generated/` 下生成 generated-chain V109 summary 和 log。
+## 12. 输出文件怎么看
 
----
+| 文件 | 含义 |
+|---|---|
+| `runs/certificate_verification/status/certificate_verification.status.json` | 主证书验证状态。 |
+| `runs/certificate_verification/diagnostics/component_checks.csv` | 四个组件的 replay 摘要。 |
+| `runs/repository_check/status/repository_check.status.json` | 仓库发布检查状态。 |
+| `runs/repository_check/diagnostics/failed_checks.csv` | 失败项；没有失败时也会有 summary row。 |
+| `runs/certificate_chain_replay/status/certificate_chain_replay.status.json` | 仅证书链 replay 的状态。 |
 
-## 18. reference-signed 与 generated-chain 的区别
+所有诊断 CSV 都会输出表头和 summary row。
 
-`reference-signed` 路线使用 `certificate/reviewer_signoff_v109.json` 中已经审阅的 reference V108 archive。这是快速最终验证使用的 signed-candidate 路线。
+## 13. SHA256 策略
 
-`generated-chain` 路线使用本地分阶段复现中新生成的 V108-style archive。这个新 ZIP 可以在语义上等价于 reference archive，但字节层面的 SHA256 不一定相同。它也不会自动继承绑定在 reference V108 archive 上的作者 signoff。
+SHA256 gate 只覆盖 `certificate/final_chain/` 中的证书归档。这些归档是证书数据。README、论文和 Python 源码由仓库检查与版本控制管理，不进入证书数据 hash gate。
 
----
+清单文件是：
 
-## 19. 为什么重新生成的 ZIP 不一定逐字节相同？
+```text
+certificate/manifest/key_artifacts_sha256.txt
+```
 
-重新生成的 ZIP 文件不一定和随仓库发布的 reference ZIP 逐字节相同。原因包括：ZIP metadata、时间戳、压缩参数、文件排序、平台信息或 run identifier 可能不同。
+查看清单：
 
-因此，分阶段 summary 会记录 generated 和 reference 的 hash 以便追踪，但逐字节相等不是唯一的复现判据。随仓库发布的 reference artifacts 由 certificate-artifact SHA gate 保护；本机新生成的文件应保存在 `runs/` 目录下，除非有意准备新的 signed release，否则不应直接替换 reference artifacts。
+```bash
+cat certificate/manifest/key_artifacts_sha256.txt
+```
 
----
+## 14. 故障排除
 
-## 20. 常见问题与排错
+### 依赖安装失败
 
-### 20.1 SHA256 检查失败怎么办？
+先升级 `pip`：
 
-先确认 `inputs/` 和 `certificate/` 下的证书 artifact 没有被手工编辑、重新压缩、下载不完整或路径移动。README、论文、图片和源码注释的修改不应影响 artifact SHA gate。
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-### 20.2 generated ZIP 与 reference ZIP 不同怎么办？
+### 找不到证书归档
 
-这不一定是失败。请先比较 staged summary fields 和日志。由于 ZIP metadata 等原因，新生成 ZIP 与 reference ZIP 的 SHA256 可能不同。
+确认 `certificate/final_chain/` 中存在四个 zip 文件。
 
-### 20.3 `theorem_ready=false` 是否表示失败？
+### 主证书验证失败
 
-不是。这个字段保持为 false 是预期状态。它表示仓库是 reproducible signed-candidate certificate package，而不是 proof-assistant theorem package。
+查看：
 
-### 20.4 为什么本仓库不声称更强数值下界？
+```text
+runs/certificate_verification/log/certificate_verification.log
+runs/certificate_verification/diagnostics/failed_component_checks.csv
+```
 
-本仓库只讨论 Brass-Sharifi 0.832 凸下界的证书化复现。它不声称得到更强的数值下界。
+### 仓库检查失败
 
-### 20.5 为什么本仓库不声称非凸版本？
+查看：
 
-本仓库只讨论凸版本的 $`\alpha_{\mathrm{cvx}}`$。它不对 unrestricted nonconvex universal-cover problem 给出下界声明。
+```text
+runs/repository_check/diagnostics/failed_checks.csv
+runs/repository_check/log/repository_check.log
+```
 
-### 20.6 为什么本仓库不声称 proof-assistant formalization？
+### README 数学公式渲染失败
 
-本仓库包含 Python verifier 和证书记录，但不包含 Lean、Coq、Isabelle 或类似系统中的完整形式化证明。
+公开 Markdown 中，行内公式使用 `$...$`，块级公式使用 `$$...$$`。仓库检查会拒绝 `\(...\)` 和 `\[...\]`。
 
----
+## 15. 常见问题
 
-## 21. 引用方式
+### 仓库是否已经包含全部证书数据？
 
-请引用 Brass-Sharifi 原论文作为数学下界来源，并引用本仓库作为 BS0832 可复现证书包。
+是。四个必要归档都在 `certificate/final_chain/`。
 
----
+### 这个结论是否解决非凸版本问题？
 
-## 22. 许可证与致谢
+不是。本仓库验证的是凸 Brass-Sharifi 三测试集框架中的证书结论。
 
-许可证见 `LICENSE`。配套论文中说明了 ChatGPT 作为辅助工具在组织实现笔记、检查复现流程和改进表述方面的使用；数学声明、计算、证书判断和最终文本由作者负责。
+### 这是 proof assistant 形式化吗？
+
+不是。本仓库提供有限证书和 Python replay 检查，不声称 Lean、Coq、Isabelle 等形式化完成。
+
+### 为什么 witness-domain 的局部面积下界大于 0.83201？
+
+这个数值只对应 witness domains。全局阈值需要把整个有限覆盖中的所有局部记录一起考虑。
+
+## 16. 论文、引用和许可
+
+编译后的论文预览在 `paper/`。
+
+引用信息见 `CITATION.cff`。
+
+本仓库采用 MIT 许可，详见 `LICENSE`。

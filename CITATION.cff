@@ -1,15 +1,23 @@
 cff-version: 1.2.0
-message: "Please cite the Brass-Sharifi paper for the original lower-bound theorem, and cite this repository for the reproducible certificate package."
-title: "A Reproducible Certificate for the Brass-Sharifi Lower Bound in Lebesgue's Universal Cover Problem"
+title: "A Certified Lower Bound for Lebesgue's Universal Cover Problem"
+message: "If you use this certificate package, please cite the accompanying paper and this repository."
 authors:
   - family-names: Xie
     given-names: Niantao
-version: "0.12"
-date-released: "2026-06-07"
+version: "v144"
+date-released: "2026-06-10"
+repository-code: "https://github.com/Sheldon-Anderson/lebesgue-universal-cover-new-lower-bound-certificate"
 license: "MIT"
+keywords:
+  - Lebesgue universal cover problem
+  - convex geometry
+  - discrete geometry
+  - computational geometry
+  - computer-assisted proof
+  - certificate
 preferred-citation:
   type: article
-  title: "A Reproducible Certificate for the Brass-Sharifi Lower Bound in Lebesgue's Universal Cover Problem"
+  title: "A Certified Lower Bound for Lebesgue's Universal Cover Problem"
   authors:
     - family-names: Xie
       given-names: Niantao

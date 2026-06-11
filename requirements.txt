@@ -1,1 +1,2 @@
-loguru>=0.7.0
+# Core scripts use the Python standard library. python-flint is recommended.
+python-flint>=0.8.0

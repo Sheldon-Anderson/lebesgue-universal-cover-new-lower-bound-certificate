@@ -1,692 +1,442 @@
-# A Reproducible Certificate for the Brass-Sharifi 0.832 Lower Bound
+# Lebesgue Universal Cover - Certified Lower-Bound Certificate
 
-This repository is an artifact and verification package for the Brass-Sharifi 0.832 lower bound in the **convex** version of Lebesgue's universal cover problem. The numerical lower bound is unchanged:
+This repository contains a finite certificate and Python verification code for the certified threshold
 
-```math
-\alpha_{\mathrm{cvx}} \geq 0.832.
-```
+$$
+\tau = 0.83201
+$$
 
-The purpose of the repository is not to introduce a new lower bound. Its purpose is to organize the computational part of the Brass-Sharifi argument as a finite, inspectable certificate: source archives, an adaptive ledger, terminal-route replay data, local lower-bound certificates, compact integrity audits, and a proof-obligation/signoff layer. The accompanying manuscript is included under `paper/`.
+in the convex Brass-Sharifi three-test-set lower-bound framework for Lebesgue's universal cover problem.
+The result verified here is the convex certificate consequence
 
----
+$$
+\alpha_{\mathrm{cvx}} \ge 0.83201.
+$$
 
-## 1. Overview
+The repository includes the certificate-chain archives needed for local verification. No extra certificate data download is required.
 
-The repository provides two complementary views of the BS0832 reproduction.
+## Contents
 
-First, it gives a mathematical certificate outline: a normalized three-test-set placement problem, a recorded Branch-B domain relation, local lower-bound certificates on terminal routes, and a finite-cover implication that leads to the convex universal-cover lower bound.
+- [What this repository verifies](#1-what-this-repository-verifies)
+- [Background and scope](#2-background-and-scope)
+- [Proof idea](#3-proof-idea)
+- [What is included](#4-what-is-included)
+- [Quick start](#5-quick-start)
+- [Installation](#6-installation)
+- [Main certificate verification](#7-main-certificate-verification)
+- [Repository check](#8-repository-check)
+- [Full certificate-chain replay](#9-full-certificate-chain-replay)
+- [Advanced component replay commands](#10-advanced-component-replay-commands)
+- [Expected outputs](#11-expected-outputs)
+- [Artifact and SHA256 policy](#12-artifact-and-sha256-policy)
+- [Troubleshooting](#13-troubleshooting)
+- [FAQ](#14-faq)
+- [Paper, citation, and license](#15-paper-citation-and-license)
 
-Second, it gives a reproducibility workflow: reference certificate artifacts, a certificate-artifact SHA256 gate, staged replay scripts, and a final verifier. The fast verifier checks the bundled signed-candidate certificate package; the staged replay scripts regenerate the V106-V109 chain for inspection and comparison.
+## 1. What this repository verifies
 
----
+Let $\mathcal U_{\mathrm{cvx}}$ be the class of convex universal covers and set
 
-## 2. Background: the convex Lebesgue universal cover problem
-
-Lebesgue's universal cover problem asks for a planar set that contains a congruent copy of every planar set of diameter one. In the convex version considered here, the covering set is required to be convex. Let
-
-```math
-\mathcal{U}_{\mathrm{cvx}}
-=
-\left\{
-K \subset \mathbb{R}^{2}:
-K \text{ is convex and contains a congruent copy of every diameter-one planar set}
-\right\}.
-```
-
-The convex quantity is
-
-```math
+$$
 \alpha_{\mathrm{cvx}}
 =
-\inf_{K\in\mathcal{U}_{\mathrm{cvx}}}\mathrm{area}(K).
-```
+\inf_{K\in\mathcal U_{\mathrm{cvx}}}\operatorname{area}(K).
+$$
 
-The Brass-Sharifi result gives the lower bound 0.832 for this convex quantity. This repository concerns only that convex lower-bound computation.
+The certificate verifies that every normalized placement in the Brass-Sharifi convex three-test-set framework has hull area at least $\tau=0.83201$. The finite-cover implication then gives $\alpha_{\mathrm{cvx}}\ge0.83201$.
 
----
+The statement is limited to the convex Brass-Sharifi three-test-set certificate setting. It does not claim a result for the unrestricted nonconvex problem, a proof-assistant formalization, or completed independent external verification.
 
-## 3. The Brass-Sharifi three-test-set placement problem
+## 2. Background and scope
 
-### 3.1 The three diameter-one test sets
+Lebesgue's universal cover problem asks for a planar set of least possible area that contains a congruent copy of every planar set of diameter one. In the convex setting, the covering set is required to be convex.
 
-The computation uses three diameter-one test sets:
+The Brass-Sharifi framework uses three necessary test sets of diameter one: a disk $C$, an equilateral triangle $T$, and a regular pentagon $P_5$. A convex universal cover must contain congruent copies of all three. Convexity then forces the cover to contain the convex hull of those copies.
 
-```math
-C = \text{the disk of diameter }1,
+This repository verifies a finite certificate for the lower bound in that normalized convex framework. It is not a search engine for new certificates; it checks the bundled certificate records.
+
+## 3. Proof idea
+
+The proof is organized as a chain of finite mathematical checks.
+
+### Step 1. From a convex universal cover to a three-test-set hull
+
+If $K\in\mathcal U_{\mathrm{cvx}}$, then $K$ contains congruent copies of $C$, $T$, and $P_5$. Since $K$ is convex, it contains their convex hull.
+
+### Step 2. From normalized placements to the hull-area function
+
+A normalized placement is
+
+$$
+v=(\rho,x_3,y_3,x_5,y_5),\qquad
+u_3=(x_3,y_3),\qquad
+u_5=(x_5,y_5).
+$$
+
+With $R_\rho$ denoting rotation by angle $\rho$, set
+
+$$
+X(v)=C\cup(T+u_3)\cup(R_\rho P_5+u_5),
 \qquad
-T = \text{the equilateral triangle of diameter }1,
+H(v)=\operatorname{conv}X(v),
 \qquad
-P_{5} = \text{the regular pentagon of diameter }1.
-```
+A(v)=\operatorname{area}(H(v)).
+$$
 
-If a convex universal cover contains congruent copies of these three sets, then by convexity it also contains their convex hull. A uniform lower bound for the area of that hull is therefore a lower bound for the area of any convex universal cover.
+Thus a lower bound for $A(v)$ on the admissible normalized domain gives a lower bound for the area of every convex universal cover.
 
-### 3.2 Normalized placement parameters
+### Step 3. From the admissible domain to a finite cover
 
-Following the Brass-Sharifi normalization used by the certificate model, the disk is fixed at the origin and the triangle orientation is fixed. A normalized placement is recorded by
+The certificate verifies a finite family $\mathcal F$ such that
 
-```math
-v=(\rho,x_{3},y_{3},x_{5},y_{5}),
-```
+$$
+\Omega_{\mathrm{adm}}\subseteq\bigcup_{B\in\mathcal F}B.
+$$
 
-with
+For each domain $B\in\mathcal F$, the certificate supplies a local lower bound $L_B$ and verifies
 
-```math
-u_{3}=(x_{3},y_{3}),
-\qquad
-u_{5}=(x_{5},y_{5}).
-```
+$$
+A(v)\ge L_B\ge\tau
+\qquad (v\in B).
+$$
 
-Here $`u_{3}`$ translates the triangle, $`\rho`$ rotates the pentagon, and $`u_{5}`$ translates the pentagon.
+### Step 4. From witness points to witness-domain lower bounds
 
-### 3.3 The convex-hull area functional
+On the witness domains, the certificate gives points $Q_B(v)\subseteq X(v)$. Therefore
 
-Let $`R_{\rho}`$ denote rotation by angle $`\rho`$. Define
+$$
+W_B(v)=\operatorname{conv} Q_B(v)\subseteq H(v),
+$$
 
-```math
-H(v)=\mathrm{conv}\left(C\cup(T+u_{3})\cup(R_{\rho} P_{5}+u_{5})\right),
-```
+so $A(v)\ge\operatorname{area}(W_B(v))$. The verifier checks witness containment, a certified cyclic order, and shoelace lower endpoints using outward-rounded interval arithmetic.
 
-and
+### Step 5. From local inequalities to the convex lower bound
 
-```math
-A(v)=\mathrm{area}(H(v)).
-```
+Since every admissible parameter lies in some $B\in\mathcal F$, the local inequalities imply
 
-The placement-level statement represented by the certificate is
+$$
+A(v)\ge0.83201\qquad(v\in\Omega_{\mathrm{adm}}).
+$$
 
-```math
-A(v)\geq 0.832
-```
+The convex universal-cover consequence is $\alpha_{\mathrm{cvx}}\ge0.83201$.
 
-for every admissible normalized placement $`v`$ in the recorded reduced domain of the certificate model.
+## 4. What is included
 
-<p align="center">
-  <img src="assets/figures/geometry.png" alt="Normalized placement of the three Brass-Sharifi test sets" width="45%">
-</p>
-
-### 3.4 From placement lower bounds to convex-cover lower bounds
-
-Once the placement-level inequality is known for all admissible normalized placements, the convex-cover consequence follows from convexity. If $`K`$ is a convex universal cover, then $`K`$ contains congruent copies of $`C`$, $`T`$, and $`P_{5}`$. Hence $`K`$ contains the convex hull of those copies, and the normalized hull area is one of the values controlled by $`A(v)`$.
-
----
-
-## 4. Scope of this repository
-
-### 4.1 What is reproduced
-
-The repository reproduces the Brass-Sharifi 0.832 lower-bound computation as a finite certificate package. It checks the bundled certificate records and records how those checks enter the final convex lower-bound statement.
-
-### 4.2 What is not claimed
-
-This repository does not claim:
-
-- a numerical lower bound stronger than 0.832;
-- a lower bound for the unrestricted nonconvex universal-cover problem;
-- a proof-assistant formalization in Lean, Coq, Isabelle, or another system;
-- independent external verification;
-- closure of the Branch-A symbolic route described below.
-
-### 4.3 Why `theorem_ready=false` is expected?
-
-The final public verification summary deliberately keeps
-
-```text
-theorem_ready = false
-```
-
-This is not a failure. It means that the repository is an author-reviewed reproducible certificate package and signed-candidate artifact, not a completed proof-assistant theorem development.
-
----
-
-## 5. What this repository adds
-
-### 5.1 Proof-organization contribution
-
-The lower bound itself is due to Brass and Sharifi. The additional proof-organization contribution here is to separate the computation into explicit layers:
-
-1. a placement-level inequality for $`A(v)`$;
-2. a recorded domain-cover relation for normalized placements;
-3. local lower-bound certificates on terminal route domains;
-4. a finite-cover implication that aggregates local certificates;
-5. a convex universal-cover consequence for $`\alpha_{\mathrm{cvx}}`$;
-6. an explicit proof-obligation record, grouped as OB-A through OB-F.
-
-### 5.2 Verification and artifact contribution
-
-At the artifact level, the repository supplies:
-
-1. a finite adaptive parent-child ledger;
-2. a terminal-route replay table;
-3. three local certificate families with a common post-guard acceptance interface;
-4. compact block-hash audits for large tables;
-5. a proof-obligation ledger;
-6. a proof-boundary audit that prevents stronger or out-of-scope claims;
-7. a final signoff schema and author self-review record;
-8. reference-signed and generated-chain verification modes.
-
-### 5.3 Relation to the original Brass-Sharifi computation
-
-The repository does not replace the original theorem. It packages the computational part of the argument into a form that can be rerun, audited, and compared against a stable certificate inventory. The numerical statement remains exactly the Brass-Sharifi 0.832 convex lower bound.
-
----
-
-## 6. Finite certificate model
-
-A finite certificate does not mean that the original geometric problem is finite. It means that the certificate used for verification is a finite, machine-readable object. In this repository, the finite object consists of:
-
-1. a finite parent-child subdivision ledger;
-2. finitely many terminal routes;
-3. finitely many directed interval, tensor, and bridge certificate records;
-4. finite row-count and block-hash integrity records;
-5. a finite proof-obligation ledger;
-6. a final signed-candidate signoff record.
-
-The verifier does not rerun an open-ended search over the continuous placement space. It checks the recorded finite objects, verifies route assignment and local acceptance records, and then applies the finite-cover aggregation principle.
-
----
-
-## 7. Branch A and Branch B
-
-### 7.1 Branch A: not claimed closed here
-
-Branch A and Branch B are labels used inside this reproduction project. They should not be presented as terminology introduced by Brass and Sharifi.
-
-Branch A denotes a symbolic domain-reduction route. This repository does not claim that Branch A has been closed.
-
-### 7.2 Branch B: the adopted enlarged-domain replay route
-
-Branch B denotes the enlarged-domain replay route used by the public certificate. The replay checks a recorded enlarged domain $`\Omega_{B}`$ that contains the admissible normalized domain represented in the certificate model.
-
-### 7.3 The domain relation
-
-The certificate-level domain relation is
-
-```math
-\Omega_{\mathrm{adm}} \subseteq \Omega_{B}
-\subseteq \bigcup_{r\in\mathcal{R}}\Omega_{r}.
-```
-
-Here $`\Omega_{\mathrm{adm}}`$ is the recorded reduced admissible normalized placement domain, $`\Omega_{B}`$ is the enlarged Branch-B replay domain, and $`\Omega_{r}`$ is the terminal-route domain for route $`r`$.
-
-### 7.4 Why Branch B is conservative?
-
-The Branch-B route is conservative in the required direction: proving the lower bound on the larger recorded domain $`\Omega_{B}`$ is stronger than proving it only on $`\Omega_{\mathrm{adm}}`$. All public certificate claims in this repository use Branch B, not Branch A.
-
----
-
-## 8. Local certificate families
-
-### 8.1 The common post-guard interface
-
-For each terminal route $`r`$, the local verifier records a post-guard lower bound $`L^{\mathrm{post}}_{r}`$ satisfying
-
-```math
-L^{\mathrm{post}}_{r} \leq \inf_{w\in\Omega_{r}} A(w),
-\qquad
-L^{\mathrm{post}}_{r} - 0.832 \geq 10^{-7}.
-```
-
-Therefore, for every $`v\in\Omega_{r}`$,
-
-```math
-A(v)
-\geq \inf_{w\in\Omega_{r}}A(w)
-\geq L^{\mathrm{post}}_{r}
-\geq 0.832 + 10^{-7}
-> 0.832.
-```
-
-The three local certificate families differ in how they produce their post-guard records. They enter the final aggregation through this same route-level interface.
-
-### 8.2 Directed interval certificates
-
-The directed interval family is the main local certificate family. It discharges 338,367 terminal routes using 41,261 directed rows. The smallest recorded post-guard margin above 0.832 is approximately
-
-```math
-4.307276422\times 10^{-6}.
-```
-
-### 8.3 Local tensor certificates
-
-The local tensor family handles 18,380 terminal routes through tensor member and package records. It uses 8,751 tensor members organized into 125 packages. The smallest recorded post-guard margin above 0.832 is approximately
-
-```math
-2.318262102\times 10^{-5}.
-```
-
-### 8.4 The $`h=0.004`$ bridge
-
-The $`h=0.004`$ bridge covers a residual set of 69 terminal routes through 282 frozen bridge witness rows. In the final aggregation it is treated as a separate bridge component rather than being absorbed into the directed or tensor families.
-
-### 8.5 How the three families enter the aggregation
-
-Every terminal route is assigned to exactly one of the three families. Once the local record for route $`r`$ is accepted, the final aggregation uses only the route-level statement
-
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{r}.
-```
-
----
-
-## 9. Certificate theorem and convex universal-cover consequence
-
-### 9.1 Finite-cover implication
-
-Assume the domain relation
-
-```math
-\Omega_{\mathrm{adm}} \subseteq \Omega_{B}
-\subseteq \bigcup_{r\in\mathcal{R}}\Omega_{r}
-```
-
-and assume that every terminal route satisfies
-
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{r}.
-```
-
-Then every admissible normalized placement satisfies
-
-```math
-A(v)\geq 0.832,
-\qquad v\in\Omega_{\mathrm{adm}}.
-```
-
-Indeed, if $`v\in\Omega_{\mathrm{adm}}`$, then $`v\in\Omega_{B}`$, and hence $`v`$ lies in at least one terminal-route domain $`\Omega_{r}`$. The local certificate for that route gives the inequality.
-
-### 9.2 BS0832 certificate theorem
-
-The BS0832 certificate theorem says that, under the stated verifier and proof-obligation model, acceptance of the finite certificate supplies the two inputs of the finite-cover implication:
-
-1. the Branch-B domain relation;
-2. a local route-level lower bound on every terminal route.
-
-The certificate theorem therefore yields the placement-level inequality
-
-```math
-A(v)\geq 0.832
-```
-
-for all admissible normalized placements recorded by the certificate domain model.
-
-### 9.3 Convex universal-cover consequence
-
-If $`K`$ is a convex universal cover, then $`K`$ contains congruent copies of $`C`$, $`T`$, and $`P_{5}`$. Since $`K`$ is convex, it contains their convex hull. After normalization, that hull has area $`A(v)`$ for an admissible placement $`v`$. Hence
-
-```math
-\mathrm{area}(K)\geq A(v)\geq 0.832.
-```
-
-Taking the infimum over all convex universal covers gives
-
-```math
-\alpha_{\mathrm{cvx}}\geq 0.832.
-```
-
-### 9.4 Logical dependency structure
-
-<p align="center">
-  <img src="assets/figures/certificate_flow.png" alt="Certificate dependency flow" width="35%">
-</p>
-
-The figure summarizes the dependency chain: Branch-B domain relation plus local route certificates imply the finite-cover statement; the certificate theorem supplies those inputs under the verifier model; the convex-cover conclusion follows by convexity.
-
----
-
-## 10. Certificate data and main counts
-
-### 10.1 Adaptive ledger and terminal routes
-
-| Component | Rows/items | Role |
-|---|---:|---|
-| Adaptive parent-child ledger | 379,192 | finite subdivision tree |
-| Adaptive terminal routes | 356,816 | terminal route closure |
-
-### 10.2 Route-family counts
-
-| Route family | Terminal routes |
-|---|---:|
-| Directed interval certificates | 338,367 |
-| Local tensor certificates | 18,380 |
-| $`h=0.004`$ bridge | 69 |
-| **Total** | **356,816** |
-
-### 10.3 Supporting certificate tables
-
-| Supporting table | Rows/items |
-|---|---:|
-| Directed interval rows | 41,261 |
-| Local tensor members | 8,751 |
-| Local tensor packages | 125 |
-| $`h=0.004`$ bridge witnesses | 282 |
-
-### 10.4 Post-guard margins and acceptance threshold
-
-| Family | Minimum post-guard margin above 0.832 |
-|---|---:|
-| Directed interval | approximately $`4.307276422\times 10^{-6}`$ |
-| Local tensor | approximately $`2.318262102\times 10^{-5}`$ |
-| Verifier acceptance threshold | $`10^{-7}`$ |
-
-The bridge records pass their zero-violation check for the residual route set assigned to that component.
-
----
-
-## 11. V106-V109 stage labels
-
-The labels V106-V109 are public stage labels inherited from the development history of this certificate package. They are not mathematical constants and not theorem numbers.
-
-| Stage | Role |
+| Path | Purpose |
 |---|---|
-| V106 | Branch-B domain replay and final kernel-closure checks |
-| V107 | independent replay, release-candidate checks, and compact block-hash audits |
-| V108 | theorem-level reproduction closure attempt and proof-obligation binding |
-| V109 | final signoff adjudication and theorem-ready gate |
+| `certificate/final_chain/` | Four bundled certificate-chain archives used by the verifier. |
+| `certificate/manifest/` | SHA256 manifest for certificate-chain archives. |
+| `certificate/public/` | Human-readable certificate status and claim-boundary notes. |
+| `ucbs/certificate/` | Python modules that replay certificate-critical checks from the archives. |
+| `ucbs/verification/` | Repository-release checks: README math rendering, claim boundary, layout, hashes, and source checks. |
+| `scripts/` | Public command-line entry points. |
+| `docs/` | Reproducibility, expected outputs, artifact policy, and FAQ. |
+| `paper/` | Compiled paper preview. |
 
----
-
-## 12. Repository layout
-
-```text
-universal-cover-bs0832-reproduction/
-├── README.md
-├── README.zh-CN.md
-├── ARTIFACTS.md
-├── CERTIFICATE.md
-├── EXPECTED_OUTPUTS.md
-├── CITATION.cff
-├── assets/figures/
-├── app/domain/
-├── scripts/
-├── inputs/
-├── certificate/
-│   └── intermediate/
-└── paper/
-```
-
-| Path | Role |
-|---|---|
-| `inputs/` | Source archives needed for staged reproduction. |
-| `certificate/` | Final signed-candidate certificate, author signoff, manifest, and checksum list. |
-| `certificate/intermediate/` | Reference V106-V108 feedback archives used by the reference-signed path. |
-| `app/domain/` | Python implementation of certificate checks and staged replay logic. |
-| `scripts/` | Command-line entry points; run them as `python -m scripts.<name>`. |
-| `paper/` | Compiled accompanying manuscript PDF. |
-| `assets/figures/` | Figures used by the README files. |
-| `runs/` | Local output directory created by scripts; it is ignored by Git. |
-
-There is no `.github/workflows/` directory. The certificate package is meant to be verifiable locally without relying on GitHub Actions.
-
----
-
-## 13. Manifest and SHA256 policy
-
-### 13.1 Why only certificate artifacts are SHA-gated?
-
-The public checksum gate is a **certificate-artifact manifest**, not a whole-repository manifest. This allows README files, manuscript files, figures, and source-code comments to be improved without changing the certificate data itself.
-
-### 13.2 Files included in the certificate SHA gate
-
-The SHA256 gate covers only certificate artifacts:
+The four certificate-chain archives are:
 
 ```text
-inputs/*.zip
-certificate/intermediate/*.zip
-certificate/feedback_v109_signed_author_self_review.zip
-certificate/reviewer_signoff_v109.json
+certificate/final_chain/per_record_evidence_feedback.zip
+certificate/final_chain/construction_audit_feedback.zip
+certificate/final_chain/witness_construction_feedback.zip
+certificate/final_chain/final_adjudication_feedback.zip
 ```
 
-### 13.3 Files excluded from the certificate SHA gate
-
-The following files are intentionally outside the certificate-artifact SHA gate:
-
-```text
-README.md
-README.zh-CN.md
-ARTIFACTS.md
-CERTIFICATE.md
-EXPECTED_OUTPUTS.md
-paper/**
-assets/**
-app/**
-scripts/**
-requirements.txt
-environment.yml
-pyproject.toml
-CITATION.cff
-```
-
-### 13.4 Why README, paper, and source-code comments do not affect certificate verification?
-
-The final verifier still requires all certificate input archives, reference intermediate archives, the final v109 certificate archive, the signoff JSON, `MANIFEST.json`, and `SHA256SUMS.txt`. It checks the artifact hashes and verifies that `MANIFEST.json` and `SHA256SUMS.txt` describe the same artifact set. Documentation edits do not change the mathematical certificate artifacts and therefore do not change the certificate SHA gate.
-
----
-
-## 14. Installation
-
-### 14.1 Using `pip`
-
-Command:
+## 5. Quick start
 
 ```bash
 python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+python scripts/verify_certificate.py --root . --log-level INFO
+python scripts/check_repository.py --root . --log-level INFO
 ```
 
-Purpose: install the Python dependency set needed by the verifier and staged replay scripts.
-
-Expected result: the command exits successfully, and the modules under `app/` and `scripts/` can be imported by Python.
-
-### 14.2 Using `conda`
-
-Commands:
-
-```bash
-conda env create -f environment.yml
-conda activate bs0832-reproduction
-```
-
-Purpose: create and activate an isolated environment for the repository.
-
-Expected result: the environment is created successfully, and subsequent `python -m scripts...` commands run inside that environment.
-
----
-
-## 15. Fast final verification
-
-### 15.1 Command
-
-```bash
-python -m scripts.run_final_verification --root . --log-level INFO
-```
-
-### 15.2 Purpose
-
-This command checks the bundled reference certificate artifacts, the certificate-only manifest/SHA256 gate, the final signed-candidate archive, and the structured author self-review signoff.
-
-### 15.3 Output files
+A successful main verification writes:
 
 ```text
-runs/final_verification/final_verification_summary.json
-runs/final_verification/final_verification.log
+runs/certificate_verification/status/certificate_verification.status.json
+runs/certificate_verification/log/certificate_verification.log
 ```
 
-### 15.4 Expected key fields
+The expected core fields are:
 
-A successful run reports:
+```json
+{
+  "status": "passed",
+  "certificate_verified": true,
+  "threshold_proved": true,
+  "certified_threshold": "0.83201",
+  "failed_component_count": 0
+}
+```
+
+## 6. Installation
+
+Requirements:
+
+- Python 3.10 or later.
+- Dependencies listed in `requirements.txt`.
+- No GPU is required.
+
+Recommended environment setup:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+```
+
+Windows PowerShell activation is:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+## 7. Main certificate verification
+
+Command:
+
+```bash
+python scripts/verify_certificate.py --root . --log-level INFO
+```
+
+Function:
+
+- Reads the four archives in `certificate/final_chain/`.
+- Replays the per-record evidence, construction audit, witness construction, and final adjudication components.
+- Writes detailed logs, diagnostic CSV files, and a status JSON file.
+
+Outputs:
 
 ```text
-status = success
-bs0832_final_repository_verification_passed = true
-required_file_count = 14
-sha256_checked_file_count = 12
-theorem_ready_signed_candidate = true
-theorem_ready = false
-proof_boundary_violations = 0
+runs/certificate_verification/status/certificate_verification.status.json
+runs/certificate_verification/diagnostics/component_checks.csv
+runs/certificate_verification/diagnostics/failed_component_checks.csv
+runs/certificate_verification/log/certificate_verification.log
+runs/certificate_verification/certificate_verification_feedback.zip
 ```
 
-The value `theorem_ready=false` is expected and is part of the proof-boundary discipline of the repository.
-
----
-
-## 16. Full staged replay
-
-### 16.1 Command
+Explicit archive paths can be supplied when needed:
 
 ```bash
-python -m scripts.run_all_stages --root . --log-level INFO
-```
-
-### 16.2 Purpose
-
-This command runs the public staged chain: V106, V107, V108, V109 reference-signed, and V109 generated-chain.
-
-### 16.3 Output files
-
-```text
-runs/stage_all/stage_chain_summary.json
-runs/stage_all/public_stage_chain.log
-runs/stage_v106/
-runs/stage_v107/
-runs/stage_v108/
-runs/stage_v109_reference/
-runs/stage_v109_generated/
-```
-
-### 16.4 Expected key fields
-
-A successful staged chain reports:
-
-```text
-status = success
-```
-
-and each stage entry in `stage_chain_summary.json` reports success.
-
-### 16.5 Why V107 is usually the heaviest stage?
-
-V107 performs the largest independent replay and compact block-hash audit checks. It is therefore usually the slowest stage in the public chain.
-
----
-
-## 17. Single-stage commands
-
-### 17.1 V106
-
-Command:
-
-```bash
-python -m scripts.run_stage_v106 --root . --log-level INFO
-```
-
-Purpose: replay Branch-B domain records, adaptive ledger closure, and kernel-closure checks.
-
-Expected output: `runs/stage_v106/` containing a V106 feedback ZIP, summary JSON, and log file.
-
-### 17.2 V107
-
-Command:
-
-```bash
-python -m scripts.run_stage_v107 --root . --log-level INFO
-```
-
-Purpose: run independent replay checks and compact integrity audits for large tables.
-
-Expected output: `runs/stage_v107/` containing a V107 feedback ZIP, summary JSON, and log file.
-
-### 17.3 V108
-
-Command:
-
-```bash
-python -m scripts.run_stage_v108 --root . --log-level INFO
-```
-
-Purpose: check theorem-level reproduction closure, proof-obligation binding, and scope records.
-
-Expected output: `runs/stage_v108/` containing a V108 feedback ZIP, summary JSON, and log file.
-
-### 17.4 V109 reference-signed
-
-Command:
-
-```bash
-python -m scripts.run_stage_v109 --root . --mode reference-signed --log-level INFO
-```
-
-Purpose: validate the bundled reference V108 archive against the author self-review signoff and produce the signed-candidate V109 decision.
-
-Expected output: `runs/stage_v109_reference/` containing a V109 summary and log.
-
-### 17.5 V109 generated-chain
-
-Command:
-
-```bash
-python -m scripts.run_stage_v109 --root . --mode generated-chain \
-  --v108-feedback-zip runs/stage_v108/feedback_v108_bs0832_theorem_level_reproduction_closure_attempt_and_final_signoff_package.zip \
+python scripts/verify_certificate.py \
+  --root . \
+  --per-record-evidence-zip certificate/final_chain/per_record_evidence_feedback.zip \
+  --construction-audit-zip certificate/final_chain/construction_audit_feedback.zip \
+  --witness-construction-zip certificate/final_chain/witness_construction_feedback.zip \
+  --final-adjudication-zip certificate/final_chain/final_adjudication_feedback.zip \
   --log-level INFO
 ```
 
-Purpose: apply the V109 logic to a freshly generated V108-style archive.
+## 8. Repository check
 
-Expected output: `runs/stage_v109_generated/` containing a generated-chain V109 summary and log.
+Command:
 
----
+```bash
+python scripts/check_repository.py --root . --log-level INFO
+```
 
-## 18. `reference-signed` versus `generated-chain`
+Function:
 
-The `reference-signed` path uses the reference V108 archive reviewed in `certificate/reviewer_signoff_v109.json`. This is the signed-candidate path used by the fast verifier.
+- Checks Python compilation and package metadata.
+- Checks repository layout and empty directories.
+- Checks public Markdown math rendering.
+- Checks claim-boundary wording.
+- Checks clean public narrative wording.
+- Checks SHA256 hashes for certificate-chain archives.
+- Runs the main certificate verification internally.
 
-The `generated-chain` path uses a freshly generated V108-style archive from the local staged replay. Such an archive can be semantically equivalent to the reference archive while still having a different byte-level hash. It does not automatically inherit the author signoff attached to the reference V108 archive.
+Outputs:
 
----
+```text
+runs/repository_check/status/repository_check.status.json
+runs/repository_check/diagnostics/failed_checks.csv
+runs/repository_check/diagnostics/readme_math.csv
+runs/repository_check/diagnostics/narrative_lint.csv
+runs/repository_check/diagnostics/claim_boundary.csv
+runs/repository_check/diagnostics/artifact_hashes.csv
+runs/repository_check/log/repository_check.log
+runs/repository_check/repository_check_feedback.zip
+```
 
-## 19. Why regenerated ZIP files need not be byte-identical?
+Because this command runs the main certificate verification internally, it also creates:
 
-A regenerated ZIP archive may differ byte-for-byte from the bundled reference ZIP because ZIP metadata can vary: timestamps, compression settings, file ordering, platform metadata, or run identifiers. The staged summaries record generated and reference hashes for traceability, but byte-for-byte equality is not the only meaningful reproducibility criterion.
+```text
+runs/certificate_verification/
+```
 
-The certificate-artifact SHA gate is reserved for the bundled reference artifacts. Fresh local outputs belong under `runs/` and should not be committed as replacements unless a new signed release is intentionally prepared.
+Expected status:
 
----
+```json
+{
+  "status": "passed",
+  "failed_step_count": 0
+}
+```
 
-## 20. Troubleshooting and common questions
+## 9. Full certificate-chain replay
 
-### 20.1 SHA256 failures
+Command:
 
-If a SHA256 check fails, first confirm that the certificate artifact files under `inputs/` and `certificate/` have not been edited, recompressed, or partially downloaded. Documentation changes should not affect the artifact SHA gate.
+```bash
+python scripts/replay_certificate_chain.py --root . --log-level INFO
+```
 
-### 20.2 Generated ZIP files differ from reference ZIP files
+Function:
 
-This is not automatically a failure. Compare the staged summary fields and logs. A generated archive may differ bytewise for metadata reasons while still passing the staged replay logic.
+- Replays the four certificate-chain components.
+- Does not run repository-release checks such as README lint or claim-boundary lint.
+- Is useful when a reader wants to inspect the mathematical certificate chain without auditing the whole release package.
 
-### 20.3 `theorem_ready=false`
+Outputs:
 
-This is expected. The repository is a reproducible signed-candidate certificate package. It does not claim proof-assistant formalization or independent external verification.
+```text
+runs/certificate_chain_replay/status/certificate_chain_replay.status.json
+runs/certificate_chain_replay/diagnostics/component_checks.csv
+runs/certificate_chain_replay/log/certificate_chain_replay.log
+runs/certificate_chain_replay/certificate_chain_replay_feedback.zip
+```
 
-### 20.4 No stronger numerical lower-bound claim
+Expected fields:
 
-The repository concerns only the Brass-Sharifi 0.832 convex lower bound. It does not claim a stronger numerical lower bound.
+```json
+{
+  "status": "passed",
+  "per_record_evidence_passed": true,
+  "construction_audit_passed": true,
+  "witness_construction_passed": true,
+  "final_adjudication_passed": true,
+  "failed_component_count": 0
+}
+```
 
-### 20.5 No unrestricted nonconvex claim
+## 10. Advanced component replay commands
 
-The repository concerns the convex quantity $`\alpha_{\mathrm{cvx}}`$. It does not assert a lower bound for the unrestricted nonconvex universal-cover problem.
+These commands inspect individual components. They do not replace the main certificate verification.
 
-### 20.6 No proof-assistant formalization claim
+### 10.1 Per-record evidence
 
-The repository contains Python verifiers and certificate records. It does not contain a Lean, Coq, Isabelle, or comparable proof-assistant formalization.
+```bash
+python scripts/replay_per_record_evidence.py --root . --log-level INFO
+```
 
----
+Reads `certificate/final_chain/per_record_evidence_feedback.zip` and checks that supporting local records are tied to individual evidence rows. Expected fields include `status = passed` and `failed_rows = 0`.
 
-## 21. Citation
+### 10.2 Construction audit
 
-Please cite the Brass-Sharifi paper as the source of the original mathematical lower bound, and cite this repository as the reproducible certificate package for the BS0832 reproduction.
+```bash
+python scripts/replay_construction_audit.py --root . --log-level INFO
+```
 
----
+Reads `certificate/final_chain/construction_audit_feedback.zip` and checks construction-stage artifacts, rounding rows, and integrity rows. Expected fields include `status = passed` and `construction_audit_passed = true`.
 
-## 22. License and acknowledgements
+### 10.3 Witness construction
 
-The repository is released under the license recorded in `LICENSE`. The accompanying manuscript acknowledges the use of ChatGPT as an auxiliary tool for organization, reproducibility workflow checks, and exposition; the mathematical claims, computations, certificate judgments, and final text are the author's responsibility.
+```bash
+python scripts/replay_witness_construction.py --root . --log-level INFO
+```
+
+Reads `certificate/final_chain/witness_construction_feedback.zip` and checks witness containment, accepted terminal subdomains, orientation rows, and shoelace lower bounds. Expected fields include `status = passed`, `witness_construction_passed = true`, and `accepted_terminal_subdomains = 140`.
+
+### 10.4 Final adjudication
+
+```bash
+python scripts/replay_final_adjudication.py --root . --log-level INFO
+```
+
+Reads `certificate/final_chain/final_adjudication_feedback.zip` and checks the final finite certificate conditions, proof obligations, claim-boundary rows, and scope flags. Expected fields include `status = passed` and `threshold_proved = true`.
+
+## 11. Expected outputs
+
+The most important files are:
+
+| File | Meaning |
+|---|---|
+| `runs/certificate_verification/status/certificate_verification.status.json` | Main certificate verification status. |
+| `runs/certificate_verification/diagnostics/component_checks.csv` | Four-component replay summary. |
+| `runs/repository_check/status/repository_check.status.json` | Public release check status. |
+| `runs/repository_check/diagnostics/failed_checks.csv` | Failed repository diagnostics, or a summary row when none fail. |
+| `runs/certificate_chain_replay/status/certificate_chain_replay.status.json` | Certificate-chain-only replay status. |
+
+Every diagnostic CSV is written with a header and a summary row, including the no-issue case.
+
+## 12. Artifact and SHA256 policy
+
+The SHA256 gate covers certificate-chain archives in `certificate/final_chain/`. These archives are the certificate data used by the replay code. Documentation files, paper files, and Python source files are checked by repository diagnostics and release control rather than by the certificate-data hash gate.
+
+The manifest is:
+
+```text
+certificate/manifest/key_artifacts_sha256.txt
+```
+
+To inspect the manifest:
+
+```bash
+cat certificate/manifest/key_artifacts_sha256.txt
+```
+
+## 13. Troubleshooting
+
+### Dependency installation fails
+
+Upgrade `pip` and retry:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### A certificate archive is missing
+
+Check that the four files listed in Section 4 exist under `certificate/final_chain/`.
+
+### Main verification fails
+
+Open:
+
+```text
+runs/certificate_verification/log/certificate_verification.log
+runs/certificate_verification/diagnostics/failed_component_checks.csv
+```
+
+### Repository check fails
+
+Open:
+
+```text
+runs/repository_check/diagnostics/failed_checks.csv
+runs/repository_check/log/repository_check.log
+```
+
+### README math rendering fails
+
+Use `$...$` for inline math and `$$...$$` for display math in public Markdown. The repository check deliberately rejects `\(...\)` and `\[...\]` in public Markdown files.
+
+## 14. FAQ
+
+### Does this repository include all certificate data needed for verification?
+
+Yes. The required archives are bundled in `certificate/final_chain/`.
+
+### Does this prove the unrestricted nonconvex problem?
+
+No. The verified statement is the convex Brass-Sharifi three-test-set certificate consequence.
+
+### Is this a proof-assistant formalization?
+
+No. The repository provides a finite certificate and deterministic Python replay checks. It does not claim a Lean, Coq, Isabelle, or other proof-assistant formalization.
+
+### Why is the minimum witness-domain area bound larger than 0.83201?
+
+The witness-domain minimum is local to the domains handled by the witness construction. The global certified threshold is the minimum guaranteed after all local records over the full finite cover are combined.
+
+## 15. Paper, citation, and license
+
+The compiled paper preview is in `paper/`.
+
+Citation metadata is provided in `CITATION.cff`.
+
+This repository is released under the MIT license. See `LICENSE`.

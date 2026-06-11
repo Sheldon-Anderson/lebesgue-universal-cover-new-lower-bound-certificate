@@ -1,23 +1,13 @@
-# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.venv/
-venv/
-.env
-
-# Local verification outputs
-runs/
-logs/
+.pytest_cache/
+.mypy_cache/
+.runs/
+runs/*
+!runs/.gitkeep
+*.aux
 *.log
-
-# OS/editor files
+*.out
+*.toc
+*.synctex.gz
 .DS_Store
-Thumbs.db
-.vscode/
-.idea/
-
-# Temporary files
-*.tmp
-*.bak
