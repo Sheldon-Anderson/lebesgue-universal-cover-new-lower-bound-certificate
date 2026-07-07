@@ -1,12 +1,30 @@
 # Certificate index
 
-The certificate chain consists of four public archives. The internal record names inside the archives preserve generation-stage identifiers for provenance. The public verifier maps those raw records into stable public components.
+This directory contains the public certificate records for the certified lower-bound threshold.
 
-| Public component | Public archive | Raw internal family | Main diagnostic records | Expected public invariant | Verifier module |
-|---|---|---|---|---|---|
-| per-record evidence | `per_record_evidence_feedback.zip` | raw v133 evidence-closure family | `v133_row_level_evidence_closure_summary.csv` and row-family closure tables | 3 closure families, no failed rows, positive selected row count | `ucbs.certificate.per_record_evidence` |
-| construction audit | `construction_audit_feedback.zip` | raw v134 construction family | artifact audit, support-to-area rows, candidate polygon rows, operation-level rounding rows | 47 artifact rows, 16 support rows, 16 candidate polygon rows, 96 operation rows | `ucbs.certificate.construction_audit` |
-| witness construction | `witness_construction_feedback.zip` | raw v135 witness family | point-containment, orientation, shoelace, order audit, rounding ledger | 16 witness domains, 140 accepted terminal subdomains, zero final unresolved terminal subdomains | `ucbs.certificate.witness_construction` |
-| final adjudication | `final_adjudication_feedback.zip` | raw v136 final-adjudication family | final gate, proof obligations, claim-boundary lint, integrity, status consistency | threshold proved, proof obligations discharged, no nonconvex/proof-assistant/external-verification overclaim | `ucbs.certificate.final_adjudication` |
+## Certified statement
 
-Some raw files include raw generation-stage field names such as `candidate_only` or `theorem_ready`. These fields are kept because they are part of the provenance of the bundled certificate records. The public status records use stable names such as `certificate_verified`, `threshold_proved`, and `witness_construction_passed`.
+The finite certificate verifies the exact decimal threshold
+
+```math
+\tau = 0.833
+```
+
+in the normalized convex Brass-Sharifi three-test-set certificate model. Together with the normalization principle, it gives the convex consequence
+
+```math
+\alpha_{\mathrm{cvx}} \ge 0.833.
+```
+
+## Public records
+
+| Path | Purpose |
+|---|---|
+| `status/` | Final certificate status, final verification status, readiness gate, and claim-boundary status. |
+| `data/` | Frozen record inventory, final verification ledger, event-aware interval replay records, witness/source records, thin extra records, and final aggregation gate. |
+| `report/` | Human-readable final verification report. |
+| `PROOF_BOUNDARY.md` | Claim scope and non-claims. |
+| `REPLAY_COMMANDS.md` | Public replay commands. |
+| `THEOREM_READY_SUMMARY.md` | Compact final-readiness summary. |
+
+The public verifier checks the manifest, hashes, final verification gate, final aggregation gate, blocker count, and claim boundary.

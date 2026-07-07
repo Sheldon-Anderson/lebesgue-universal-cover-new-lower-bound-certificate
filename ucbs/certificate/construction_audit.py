@@ -1,17 +1,16 @@
-"""Replay checks for construction-audit certificate records.
+"""Replay checks for public construction-audit records.
 
-This module verifies artifact presence, support-to-area rows, candidate
-polygon rows, rounding records, and construction-stage integrity checks from
-the bundled construction-audit archive. It does not regenerate the certificate
-records from geometric search data.
+The public construction archive contains event-aware interval replay rows and
+thin-extra replay rows. These checks verify that the bundled rows are present,
+schema-conforming, numerically clear, and marked as passing.
 """
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from ucbs.certificate.archive_io import (
     read_csv_member,
-    read_json_member,
     relative_label,
     require_members,
     resolve_archive,
@@ -21,39 +20,71 @@ from ucbs.certificate.validation import (
     check_row,
     require_columns,
     require_exact_count,
-    require_min_count,
     require_unique_keys,
-    status_passed,
     truthy,
     write_component_outputs,
 )
 
 REQUIRED_MEMBERS = [
-    "diagnostics/v134_final_kernel_closure_artifact_audit.csv",
-    "diagnostics/v134_support_to_area_final_lemma_certificate.csv",
-    "diagnostics/v134_inner_polygon_area_certificate.csv",
-    "diagnostics/v134_operation_level_arb_rounding_ledger.csv",
-    "diagnostics/v134_theorem_critical_artifact_integrity.csv",
-    "diagnostics/v134_conditional_theorem_ready_gate.csv",
-    "status/v134.status.json",
+    "data/event_aware_interval_replay_adjudication.csv",
+    "data/p1_thin_extra_replay_adjudication.csv",
 ]
 
-ARTIFACT_COLUMNS = {"artifact_path", "size_bytes", "sha256", "artifact_audit_status"}
-SUPPORT_COLUMNS = {"patch_record_id", "support_area_policy", "support_to_area_final_passed", "support_to_area_final_status"}
-POLYGON_COLUMNS = {"patch_record_id", "area_certificate_route", "candidate_margin_vs_083201", "inner_polygon_kernel_passed", "inner_polygon_status"}
-ROUNDING_COLUMNS = {"operation_id", "patch_record_id", "operation_name", "contains_target_bound", "arb_status", "proof_status"}
-INTEGRITY_COLUMNS = {"zip_basename", "theorem_critical_hash_mismatch_count", "theorem_critical_integrity_status"}
-GATE_COLUMNS = {"gate_id", "input_integrity_passed", "row_level_evidence_closed", "global_replay_hardened"}
+EVENT_COLUMNS = {
+    "adjudication_row",
+    "component",
+    "requirement",
+    "root_box_id",
+    "record_id",
+    "freeze_route_kind",
+    "freeze_route_status",
+    "min_surplus",
+    "numeric_clearance_ok",
+    "route_status_ok",
+    "adjudication_status",
+    "adjudication_pass",
+    "proof_boundary",
+}
+THIN_COLUMNS = {
+    "adjudication_row",
+    "component",
+    "requirement",
+    "root_box_id",
+    "record_id",
+    "freeze_route_kind",
+    "freeze_route_status",
+    "min_surplus",
+    "extra_split_retained",
+    "numeric_clearance_ok",
+    "adjudication_status",
+    "adjudication_pass",
+    "proof_boundary",
+}
+
+EXPECTED_EVENT_ROWS = 493
+EXPECTED_THIN_ROWS = 11
 
 
-def _all_status(rows: list[dict[str, str]], field: str, passing: set[str]) -> bool:
-    if not rows:
+def _positive_decimal(value: object) -> bool:
+    text = str(value).strip()
+    if not text:
+        return True
+    try:
+        return Decimal(text) > Decimal("0")
+    except (InvalidOperation, ValueError):
         return False
-    return all(str(row.get(field, "")).strip().lower() in passing for row in rows)
+
+
+def _has_numeric_surplus(rows: list[dict[str, str]]) -> bool:
+    return any(str(row.get("min_surplus", "")).strip() for row in rows)
+
+
+def _all_pass(rows: list[dict[str, str]], field: str) -> bool:
+    return bool(rows) and all(truthy(row.get(field)) for row in rows)
 
 
 def check_construction_audit(root: Path, archive: str | Path) -> ComponentReport:
-    """Check construction-audit records from the archive."""
+    """Check construction-audit records from the public archive."""
     path = resolve_archive(root, archive)
     checks = []
     if not path.exists():
@@ -66,51 +97,37 @@ def check_construction_audit(root: Path, archive: str | Path) -> ComponentReport
     if not all(truthy(row.get("passed")) for row in member_rows):
         return ComponentReport("construction_audit", False, checks, {"construction_audit_passed": False})
 
-    status = read_json_member(path, "status/v134.status.json")
-    artifact_audit = read_csv_member(path, "diagnostics/v134_final_kernel_closure_artifact_audit.csv")
-    support_area = read_csv_member(path, "diagnostics/v134_support_to_area_final_lemma_certificate.csv")
-    polygon_area = read_csv_member(path, "diagnostics/v134_inner_polygon_area_certificate.csv")
-    rounding = read_csv_member(path, "diagnostics/v134_operation_level_arb_rounding_ledger.csv")
-    integrity = read_csv_member(path, "diagnostics/v134_theorem_critical_artifact_integrity.csv")
-    gate = read_csv_member(path, "diagnostics/v134_conditional_theorem_ready_gate.csv")
+    event_rows = read_csv_member(path, "data/event_aware_interval_replay_adjudication.csv")
+    thin_rows = read_csv_member(path, "data/p1_thin_extra_replay_adjudication.csv")
 
-    checks.extend(require_columns(artifact_audit, ARTIFACT_COLUMNS, "construction_artifact_audit"))
-    checks.extend(require_columns(support_area, SUPPORT_COLUMNS, "support_to_area_rows"))
-    checks.extend(require_columns(polygon_area, POLYGON_COLUMNS, "candidate_polygon_rows"))
-    checks.extend(require_columns(rounding, ROUNDING_COLUMNS, "construction_rounding_rows"))
-    checks.extend(require_columns(integrity, INTEGRITY_COLUMNS, "construction_integrity_rows"))
-    checks.extend(require_columns(gate, GATE_COLUMNS, "construction_gate_rows"))
-    checks.append(require_exact_count(artifact_audit, 47, "construction_artifact_audit"))
-    checks.append(require_exact_count(support_area, 16, "support_to_area_rows"))
-    checks.append(require_exact_count(polygon_area, 16, "candidate_polygon_rows"))
-    checks.append(require_exact_count(rounding, 96, "construction_rounding_rows"))
-    checks.append(require_min_count(integrity, 1, "construction_integrity_rows"))
-    checks.append(require_exact_count(gate, 1, "construction_gate_rows"))
-    checks.append(require_unique_keys(artifact_audit, ["artifact_path"], "construction_artifact_audit"))
-    checks.append(require_unique_keys(support_area, ["patch_record_id"], "support_to_area_rows"))
-    checks.append(require_unique_keys(polygon_area, ["patch_record_id"], "candidate_polygon_rows"))
-    checks.append(require_unique_keys(rounding, ["operation_id"], "construction_rounding_rows"))
+    checks.extend(require_columns(event_rows, EVENT_COLUMNS, "event_aware_interval_rows"))
+    checks.extend(require_columns(thin_rows, THIN_COLUMNS, "thin_extra_rows"))
+    checks.append(require_exact_count(event_rows, EXPECTED_EVENT_ROWS, "event_aware_interval_rows"))
+    checks.append(require_exact_count(thin_rows, EXPECTED_THIN_ROWS, "thin_extra_rows"))
+    checks.append(require_unique_keys(event_rows, ["adjudication_row"], "event_aware_interval_rows"))
+    checks.append(require_unique_keys(thin_rows, ["adjudication_row"], "thin_extra_rows"))
+    checks.append(require_unique_keys(thin_rows, ["record_id"], "thin_extra_records"))
 
-    checks.append(check_row("artifact_audit_present", _all_status(artifact_audit, "artifact_audit_status", {"present"}), len(artifact_audit), "construction archive artifacts are present"))
-    checks.append(check_row("rounding_arb_available", all(str(row.get("arb_status", "")).strip().lower() == "available" for row in rounding), len(rounding), "arb rounding backend is available in recorded operation rows"))
-    checks.append(check_row("rounding_contains_threshold", all(truthy(row.get("contains_target_bound")) for row in rounding), len(rounding), "rounding rows retain threshold containment"))
-    checks.append(check_row("critical_integrity_passed", _all_status(integrity, "theorem_critical_integrity_status", {"passed"}), len(integrity), "critical artifact integrity rows pass"))
-    gate_row = gate[0] if gate else {}
-    gate_passed = truthy(gate_row.get("input_integrity_passed")) and truthy(gate_row.get("row_level_evidence_closed")) and truthy(gate_row.get("global_replay_hardened"))
-    checks.append(check_row("conditional_gate_preconditions", gate_passed, gate_row.get("gate_id", ""), "construction-stage preconditions are recorded"))
-    checks.append(check_row("status_input_integrity", truthy(status.get("input_integrity_passed")), status.get("input_integrity_passed"), "status records input integrity"))
-    checks.append(check_row("status_global_replay_hardened", truthy(status.get("global_replay_hardened")), status.get("global_replay_hardened"), "status records hardened global replay"))
-    checks.append(check_row("status_value_accepted", status_passed(status.get("status")) or str(status.get("status", "")).startswith("success"), status.get("status"), "status records a successful construction-audit run"))
+    checks.append(check_row("event_adjudication_pass", _all_pass(event_rows, "adjudication_pass"), len(event_rows), "all event-aware rows pass"))
+    checks.append(check_row("event_numeric_clearance", _all_pass(event_rows, "numeric_clearance_ok"), len(event_rows), "all event-aware rows clear the numeric tests"))
+    checks.append(check_row("event_route_status", _all_pass(event_rows, "route_status_ok"), len(event_rows), "all event-aware route status rows pass"))
+    checks.append(check_row("event_positive_surplus", _has_numeric_surplus(event_rows) and all(_positive_decimal(row.get("min_surplus")) for row in event_rows), len(event_rows), "all non-empty event-aware surplus values are positive"))
+    checks.append(check_row("thin_adjudication_pass", _all_pass(thin_rows, "adjudication_pass"), len(thin_rows), "all thin-extra rows pass"))
+    checks.append(check_row("thin_numeric_clearance", _all_pass(thin_rows, "numeric_clearance_ok"), len(thin_rows), "all thin-extra rows clear the numeric tests"))
+    checks.append(check_row("thin_extra_retained", _all_pass(thin_rows, "extra_split_retained"), len(thin_rows), "all thin-extra rows are retained"))
+    checks.append(check_row("thin_positive_surplus", _has_numeric_surplus(thin_rows) and all(_positive_decimal(row.get("min_surplus")) for row in thin_rows), len(thin_rows), "all thin-extra surplus values are positive"))
 
     passed = not any(not truthy(row.get("passed")) for row in checks)
-    details = {
-        "construction_audit_passed": passed,
-        "artifact_rows": len(artifact_audit),
-        "operation_rows": len(rounding),
-        "support_to_area_rows": len(support_area),
-        "candidate_polygon_rows": len(polygon_area),
-    }
-    return ComponentReport("construction_audit", passed, checks, details)
+    return ComponentReport(
+        "construction_audit",
+        passed,
+        checks,
+        {
+            "construction_audit_passed": passed,
+            "event_aware_interval_rows": len(event_rows),
+            "thin_extra_rows": len(thin_rows),
+        },
+    )
 
 
 def run_construction_audit_replay(

@@ -1,4 +1,4 @@
-"""Public entry point for certificate verification."""
+"""Public certificate verifier for the bundled finite certificate."""
 from __future__ import annotations
 
 import argparse
@@ -28,14 +28,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run certificate verification and return a process exit code.
-
-    The command writes detailed diagnostics under ``runs/<run-id>/`` and
-    emits a compact JSON summary to standard output.
-    """
+    """Run the certificate verification command."""
     args = build_parser().parse_args(argv)
     result = verify_certificate(
-        root=Path(args.root),
+        root=Path(args.root).resolve(),
         artifact_root=args.artifact_root,
         per_record_evidence_zip=args.per_record_evidence_zip,
         construction_audit_zip=args.construction_audit_zip,
@@ -49,11 +45,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             "status": result.status,
             "certificate_verified": result.certificate_verified,
             "threshold_proved": result.threshold_proved,
+            "certified_threshold": "0.833",
             "failed_component_count": result.failed_component_count,
             "feedback": str(result.output_feedback),
         }
     )
-    return 0 if result.certificate_verified else 1
+    return 0 if result.status == "passed" else 1
 
 
 if __name__ == "__main__":

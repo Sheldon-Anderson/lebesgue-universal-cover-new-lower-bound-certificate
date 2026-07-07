@@ -6,10 +6,10 @@ The repository is a verification package for bundled certificate records. It is 
 
 ## 1. Verified statement
 
-The bundled finite certificate verifies the threshold $\tau=0.83201$ for the normalized Brass-Sharifi three-test-set lower-bound problem. Together with the Brass-Sharifi normalization principle, this gives the convex certificate consequence
+The bundled finite certificate verifies the exact decimal threshold $\tau=0.833$ for the normalized Brass-Sharifi three-test-set lower-bound problem. Together with the Brass-Sharifi normalization principle, this gives the convex certificate consequence
 
 ```math
-\alpha_{\mathrm{cvx}} \ge 0.83201.
+\alpha_{\mathrm{cvx}} \ge 0.833.
 ```
 
 Here $\alpha_{\mathrm{cvx}}$ is the infimum of the areas of convex universal covers. The proof uses a finite cover of the admissible normalized placement domain, supporting local records, witness-domain polygon records, outward-rounded interval estimates, and a final aggregation check.
@@ -18,7 +18,7 @@ Here $\alpha_{\mathrm{cvx}}$ is the infimum of the areas of convex universal cov
 
 Claimed:
 
-- a finite-certificate verification of $\tau=0.83201$ in the convex Brass-Sharifi three-test-set certificate setting;
+- a finite-certificate verification of $\tau=0.833$ in the convex Brass-Sharifi three-test-set certificate setting;
 - a convex certificate consequence for $\alpha_{\mathrm{cvx}}$;
 - deterministic replay of theorem-relevant checks from the bundled certificate records.
 
@@ -40,7 +40,7 @@ Not claimed:
 | `scripts/` | Stable command-line entry points. |
 | `tests/` | Optional developer regression tests for the verifier and lint rules. |
 | `docs/` | Reproducibility, output fields, data dictionary, artifact policy, and claim scope. |
-| `paper/` | Compiled paper PDF. |
+| `paper/` | Compiled paper PDF and LaTeX source. |
 
 The required certificate data are already bundled with the repository. No additional certificate data download is needed for the public verification commands.
 
@@ -52,7 +52,7 @@ The required certificate data are already bundled with the repository. No additi
 | certificate verification | Deterministic replay of the bundled certificate records. |
 | witness construction | Witness-domain polygonal lower-bound records. |
 | construction audit | Support-to-area and interval-rounding checks. |
-| final adjudication | Final proof-obligation and claim-boundary checks. |
+| final verification | Final proof-obligation and claim-boundary checks. |
 
 ## 4. Mathematical proof map
 
@@ -62,7 +62,7 @@ The proof map is:
 2. The Brass-Sharifi normalization represents the corresponding three-test-set hull by a parameter $v$ in the recorded admissible domain $\Omega_{\mathrm{adm}}$.
 3. The finite certificate verifies a finite cover of $\Omega_{\mathrm{adm}}$ by parameter domains.
 4. Each parameter domain carries a local lower-bound assertion. Supporting domains use supporting local records; witness domains use ordered witness polygons and interval shoelace lower bounds.
-5. The final aggregation gives $A(v)\ge 0.83201$ throughout $\Omega_{\mathrm{adm}}$, and the convex consequence follows.
+5. The final aggregation gives $A(v)\ge 0.833$ throughout $\Omega_{\mathrm{adm}}$, and the convex consequence follows.
 
 The certificate-chain replay verifies records already bundled in `certificate/final_chain/`. It does not search for new certificates.
 
@@ -84,7 +84,7 @@ A successful repository check also runs the main certificate verification intern
 python scripts/verify_certificate.py --root . --log-level INFO
 ```
 
-Purpose: verify the four bundled certificate-chain archives and write the main certificate status under `runs/certificate_verification/`.
+Purpose: verify the bundled certificate records and write the main certificate status under `runs/certificate_verification/`.
 
 ### 6.2 Repository release check
 
@@ -92,7 +92,7 @@ Purpose: verify the four bundled certificate-chain archives and write the main c
 python scripts/check_repository.py --root . --log-level INFO
 ```
 
-Purpose: check the public release package, including Python compilation, package metadata, repository layout, Markdown math rendering, claim boundary, artifact hashes, and the main certificate verification.
+Purpose: check the public release package, including Python compilation, package metadata, repository layout, Markdown math fragments, claim boundary, artifact hashes, and the main certificate verification.
 
 ### 6.3 Certificate-chain verification
 
@@ -100,7 +100,7 @@ Purpose: check the public release package, including Python compilation, package
 python scripts/replay_certificate_chain.py --root . --log-level INFO
 ```
 
-Purpose: verify the four certificate-chain components without README, documentation, or repository-layout checks.
+Purpose: verify the certificate-chain components without README, documentation, or repository-layout checks.
 
 For component-level verification commands, see `docs/reproducibility.md`.
 
@@ -121,7 +121,7 @@ The main certificate verification should include:
   "status": "passed",
   "certificate_verified": true,
   "threshold_proved": true,
-  "certified_threshold": "0.83201",
+  "certified_threshold": "0.833",
   "failed_component_count": 0
 }
 ```
@@ -143,7 +143,7 @@ The paper PDF is available at:
 
 `paper/A_Certified_Lower_Bound_for_Lebesgues_Universal_Cover_Problem.pdf`
 
-The LaTeX source is distributed through the paper release or arXiv source archive, not through this certificate-verification repository.
+The LaTeX source is included under `paper/source/` for transparency.
 
 Please cite the repository using `CITATION.cff`. The code and public documentation are released under the MIT license; see `LICENSE`.
 

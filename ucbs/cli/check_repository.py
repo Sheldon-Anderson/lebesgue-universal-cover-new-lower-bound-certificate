@@ -1,4 +1,4 @@
-"""Public entry point for repository release checks."""
+"""Repository release check for the bundled certificate package."""
 from __future__ import annotations
 
 import argparse
@@ -28,15 +28,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run public repository checks and return a process exit code.
-
-    The command checks the public release layout, Markdown policy, claim
-    boundaries, artifact hashes, Python compilation, and the main certificate
-    verification. A compact JSON summary is written to standard output.
-    """
+    """Run repository-level release checks."""
     args = build_parser().parse_args(argv)
     result = run_repository_check(
-        root=Path(args.root),
+        root=Path(args.root).resolve(),
         artifact_root=args.artifact_root,
         per_record_evidence_zip=args.per_record_evidence_zip,
         construction_audit_zip=args.construction_audit_zip,

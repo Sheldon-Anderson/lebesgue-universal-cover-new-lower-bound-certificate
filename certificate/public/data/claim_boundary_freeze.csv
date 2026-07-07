@@ -1,0 +1,7 @@
+claim,allowed,status,notes
+convex_brass_sharifi_three_test_set_model,True,ok,Statements are restricted to the normalized convex Brass-Sharifi three-test-set certificate model.
+target_threshold,True,ok,Target is the exact decimal threshold 0.833.
+nonconvex_lebesgue_problem_solved,False,blocked,Do not state a nonconvex universal-cover theorem.
+proof_assistant_formalization,False,blocked,No Lean/Coq/Isabelle formalization is asserted.
+external_independent_verification,False,blocked,No completed independent external verification is asserted.
+stronger_threshold_claim,False,blocked,Do not claim any stronger threshold in this release.

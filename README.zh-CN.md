@@ -6,10 +6,10 @@
 
 ## 1. 这个仓库验证什么
 
-本仓库验证阈值 $\tau=0.83201$。结合 Brass-Sharifi 归一化原理，它给出凸版本的证书结论：
+本仓库验证精确十进制阈值 $\tau=0.833$。结合 Brass-Sharifi 归一化原理，它给出凸版本的证书结论：
 
 ```math
-\alpha_{\mathrm{cvx}} \ge 0.83201.
+\alpha_{\mathrm{cvx}} \ge 0.833.
 ```
 
 这里 $\alpha_{\mathrm{cvx}}$ 表示凸万有覆盖集合面积的下确界。证明使用有限覆盖、支撑型局部记录、见证域多边形记录、外向舍入区间估计和最终聚合检查。
@@ -18,7 +18,7 @@
 
 本仓库声称：
 
-- 在凸 Brass-Sharifi 三测试集证书框架下验证 $\tau=0.83201$；
+- 在凸 Brass-Sharifi 三测试集证书框架下验证 $\tau=0.833$；
 - 得到对应的凸版本证书结论；
 - 对随仓库打包的证书记录做确定性复验。
 
@@ -40,7 +40,7 @@
 | `scripts/` | 稳定的命令行入口。 |
 | `tests/` | 可选开发者回归测试。 |
 | `docs/` | 复现说明、输出字段、数据字典、artifact 策略和声明边界。 |
-| `paper/` | 编译后的论文 PDF。 |
+| `paper/` | 编译后的论文 PDF 和 LaTeX 源码。 |
 
 仓库已经包含验证所需的证书数据，不需要额外下载。
 
@@ -52,7 +52,7 @@
 | 证书验证 | 对随仓库打包的证书记录做确定性复验。 |
 | 见证构造 | 见证域上的多边形下界记录。 |
 | 构造审计 | support-to-area 与区间舍入检查。 |
-| 最终核验 | 证明义务和声明边界检查。 |
+| 最终验证 | 证明义务和声明边界检查。 |
 
 ## 4. 数学证明链路
 
@@ -62,7 +62,7 @@
 2. Brass-Sharifi 归一化把对应的三测试集凸包写成容许域 $\Omega_{\mathrm{adm}}$ 上的参数化问题。
 3. 有限证书验证 $\Omega_{\mathrm{adm}}$ 的有限覆盖。
 4. 每个覆盖域都有局部下界。支撑域使用支撑型局部记录，见证域使用有序见证多边形和区间鞋带公式下界。
-5. 最终聚合得到 $A(v)\ge 0.83201$，从而推出凸版本下界。
+5. 最终聚合得到 $A(v)\ge 0.833$，从而推出凸版本下界。
 
 证书链复验只复验 `certificate/final_chain/` 中已经打包的证书记录，不搜索新的证书。
 
@@ -84,7 +84,7 @@ python scripts/check_repository.py --root . --log-level INFO
 python scripts/verify_certificate.py --root . --log-level INFO
 ```
 
-作用：验证四个证书链归档，并在 `runs/certificate_verification/` 下写出主证书状态。
+作用：验证证书链归档，并在 `runs/certificate_verification/` 下写出主证书状态。
 
 ### 6.2 仓库发布检查
 
@@ -92,7 +92,7 @@ python scripts/verify_certificate.py --root . --log-level INFO
 python scripts/check_repository.py --root . --log-level INFO
 ```
 
-作用：检查 Python 编译、包配置、仓库布局、Markdown 数学渲染、声明边界、artifact 哈希和主证书验证。
+作用：检查 Python 编译、包配置、仓库布局、Markdown 数学片段、声明边界、artifact 哈希和主证书验证。
 
 ### 6.3 证书链验证
 
@@ -100,7 +100,7 @@ python scripts/check_repository.py --root . --log-level INFO
 python scripts/replay_certificate_chain.py --root . --log-level INFO
 ```
 
-作用：验证四个证书链组件，不检查 README、docs、仓库目录结构或发布质量。
+作用：验证证书链组件，不检查 README、docs、仓库目录结构或发布质量。
 
 分组件复验命令见 `docs/reproducibility.md`。
 
@@ -121,7 +121,7 @@ python -m unittest discover -s tests
   "status": "passed",
   "certificate_verified": true,
   "threshold_proved": true,
-  "certified_threshold": "0.83201",
+  "certified_threshold": "0.833",
   "failed_component_count": 0
 }
 ```
@@ -143,7 +143,7 @@ python -m unittest discover -s tests
 
 `paper/A_Certified_Lower_Bound_for_Lebesgues_Universal_Cover_Problem.pdf`
 
-LaTeX 源码由论文发布包或 arXiv source archive 保存，不放在这个证书验证仓库中。
+LaTeX 源码位于 `paper/source/`。
 
 引用信息见 `CITATION.cff`。代码和公开文档采用 MIT 许可，见 `LICENSE`。
 

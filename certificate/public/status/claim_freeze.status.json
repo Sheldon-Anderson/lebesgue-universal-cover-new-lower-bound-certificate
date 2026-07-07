@@ -1,0 +1,11 @@
+{
+  "claim_boundary_ok": true,
+  "claim_scope": "convex_brass_sharifi_three_test_set_certificate_model_only",
+  "external_independent_verification_claim": false,
+  "final_blocker_count": 0,
+  "nonconvex_claim": false,
+  "proof_assistant_formalization_claim": false,
+  "stronger_threshold_claim": false,
+  "target": "0.833",
+  "theorem_ready": true
+}

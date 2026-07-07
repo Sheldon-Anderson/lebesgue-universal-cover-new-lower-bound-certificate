@@ -213,7 +213,6 @@ def check_layout(root: Path) -> list[dict[str, Any]]:
         "certificate/legacy_bs0832",
         "paper/preview",
         "paper/pdf",
-        "paper/source",
         "certificate/public/README.md",
         "scripts/make_release_zip.py",
         "ucbs/cli/make_release_zip.py",
@@ -333,6 +332,44 @@ def check_raw_stage_label_policy(root: Path) -> list[dict[str, Any]]:
     return rows
 
 
+
+PUBLIC_SANITIZATION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"[A-Za-z]:\\"), "Windows absolute path"),
+    (re.compile(r"\\Users\\|/Users/"), "user-home absolute path"),
+    (re.compile(r"local_runner", re.I), "local runner label"),
+    (re.compile(r"local-default", re.I), "local workload label"),
+    (re.compile(r"feedback_zip_path", re.I), "machine-local feedback path field"),
+    (re.compile(r"log_path", re.I), "machine-local log path field"),
+    (re.compile(r"v144_feedback_zip", re.I), "pre-release feedback path field"),
+]
+
+
+def check_public_release_sanitization(root: Path) -> list[dict[str, Any]]:
+    """Return machine-local traces left in public status or report files."""
+    rows: list[dict[str, Any]] = []
+    candidates: list[Path] = []
+    for folder in [root / "certificate" / "public" / "status", root / "certificate" / "public" / "report"]:
+        if folder.exists():
+            candidates.extend(path for path in folder.rglob("*") if path.is_file())
+    for path in sorted(candidates):
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            for pattern, issue in PUBLIC_SANITIZATION_PATTERNS:
+                if pattern.search(line):
+                    rows.append(
+                        {
+                            "check": "public_release_sanitization",
+                            "file": rel,
+                            "line": line_number,
+                            "issue": issue,
+                            "passed": False,
+                            "summary": "machine-local public-release trace found",
+                        }
+                    )
+    return rows
+
+
 def _collect_failed(diagnostics: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
     """Collect rows whose ``passed`` field is false-like."""
     failed: list[dict[str, Any]] = []
@@ -393,6 +430,9 @@ def run_repository_check(
 
     _append_log(log, "checking raw v13x provenance labels")
     diagnostics["raw_stage_label_policy"] = _with_summary("raw_stage_label_policy", check_raw_stage_label_policy(root), "raw v13x labels appear only in provenance docs", "raw v13x label found outside allowed provenance docs")
+
+    _append_log(log, "checking public status and report sanitization")
+    diagnostics["public_release_sanitization"] = _with_summary("public_release_sanitization", check_public_release_sanitization(root), "no machine-local public-release trace found", "machine-local public-release trace found")
 
     _append_log(log, "checking clean public narrative")
     diagnostics["narrative_lint"] = _with_summary("narrative_lint", check_narrative_lint(root), "public narrative is clean", "forbidden clean-story wording found")

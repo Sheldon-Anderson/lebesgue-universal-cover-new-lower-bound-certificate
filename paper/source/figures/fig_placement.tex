@@ -1,0 +1,86 @@
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=4.25, line cap=round, line join=round, >=Latex, every node/.style={font=\small}]
+  % Coordinate frame and reference points.
+  \coordinate (O) at (0,0);
+  \coordinate (Tctr) at (0.14,0.22);
+  \coordinate (Pctr) at (0.52,-0.18);
+
+  % Triangle translated by (x3,y3).
+  \coordinate (A) at (-0.22,0.10);
+  \coordinate (B) at (0.40,0.10);
+  \coordinate (Ctop) at (0.09,0.64);
+
+  % Pentagon translated and rotated.
+  \foreach \i in {0,...,4} {
+    \coordinate (P\i) at ({0.52+0.34*cos(72*\i+30)}, {-0.18+0.34*sin(72*\i+30)});
+  }
+
+  % Tangency angles on the disk used by the schematic convex hull.
+  % These points lie on the disk of radius 0.35 and make the hull outline
+  % meet the disk boundary without visible gaps.
+  \def\HullTopAngle{139.2063}
+  \def\HullBotAngle{252.1517}
+  \coordinate (HtopDisk) at ({0.35*cos(\HullTopAngle)}, {0.35*sin(\HullTopAngle)});
+  \coordinate (HbotDisk) at ({0.35*cos(\HullBotAngle)}, {0.35*sin(\HullBotAngle)});
+
+  % Schematic convex-hull path.  The polygonal part follows the exposed
+  % triangle and pentagon vertices, and the final arc follows the exposed
+  % boundary of the disk.
+  \def\PlacementHullPath{%
+    (HtopDisk)
+    -- (Ctop)
+    -- (P0)
+    -- (P4)
+    -- (P3)
+    -- (HbotDisk)
+    arc[start angle=\HullBotAngle,end angle=\HullTopAngle,radius=0.35]%
+  }
+
+  % Axes.
+  \draw[->, gray!55] (-0.78,-0.70) -- (1.08,-0.70) node[right, font=\scriptsize] {$x$};
+  \draw[->, gray!55] (-0.78,-0.70) -- (-0.78,0.90) node[above, font=\scriptsize] {$y$};
+
+  % Convex hull fill, placed behind the three test sets.
+  \begin{scope}[on background layer]
+    \fill[gray!5] \PlacementHullPath -- cycle;
+  \end{scope}
+
+  % Disk.
+  \fill[gray!6] (O) circle (0.35);
+  \draw[thick] (O) circle (0.35);
+  \draw[thin] (-0.35,0)--(0.35,0);
+  \fill (O) circle (0.012);
+  \node[anchor=north east] at (O) {$O$};
+  \node[anchor=east] at (-0.12,-0.19) {$C$};
+
+  % Triangle translated by (x3,y3).
+  \fill[gray!24] (A)--(B)--(Ctop)--cycle;
+  \draw[thick] (A)--(B)--(Ctop)--cycle;
+  \fill (Tctr) circle (0.011);
+  \draw[->, thick] (O) -- (Tctr);
+  \node[font=\scriptsize, anchor=south west] at (0.11,0.21) {$u_3$};
+  \node[anchor=west, align=left, font=\scriptsize] at (-0.05,0.40) {$T+u_3$};
+
+  % Pentagon translated and rotated.
+  \fill[gray!38] (P0)--(P1)--(P2)--(P3)--(P4)--cycle;
+  \draw[thick] (P0)--(P1)--(P2)--(P3)--(P4)--cycle;
+  \fill (Pctr) circle (0.011);
+  \draw[->, thick] (O) -- (Pctr);
+  \node[font=\scriptsize, anchor=north west] at (0.40,-0.18) {$u_5$};
+  \node[anchor=west, align=left, font=\scriptsize] at (0.35,-0.37) {$R_\rho P_5+u_5$};
+
+  % Rotation indicator.
+  \draw[->, thick] (0.52,-0.18) ++(0.19,0) arc[start angle=0,end angle=30,radius=0.19];
+  \node[font=\scriptsize] at (0.75,-0.06) {$\rho$};
+
+  % Convex hull outline, drawn last so that the dashed boundary is complete
+  % and remains visible on top of the three test sets.
+  \draw[very thick, dashed, gray!80] \PlacementHullPath -- cycle;
+  \node[align=center, font=\scriptsize] at (-0.3,0.45) {$H(v)$};
+
+\end{tikzpicture}
+
+\caption{Schematic normalized placement of the three Brass--Sharifi test sets. The disk $\Cdisc$ is fixed at the origin $O$, the triangle is translated by $\transTri=(x_3,y_3)$, and the pentagon is rotated counterclockwise about the origin by $\rho$ and then translated by $\transPent=(x_5,y_5)$. The enclosing curve represents $\Hull(\paramv)=\conv(\Cdisc\cup(\Ttri+\transTri)\cup(R_\rho\Pfive+\transPent))$.}
+\label{fig:placement}
+\end{figure}

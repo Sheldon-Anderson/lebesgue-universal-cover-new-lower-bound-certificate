@@ -17,8 +17,8 @@ DiagnosticRow = dict[str, Any]
 CsvRow = dict[str, str]
 """One row read from a certificate CSV file."""
 
-CERTIFIED_THRESHOLD = Decimal("0.83201")
-CERTIFIED_THRESHOLD_TEXT = "0.83201"
+CERTIFIED_THRESHOLD = Decimal("0.833")
+CERTIFIED_THRESHOLD_TEXT = "0.833"
 
 
 @dataclass

@@ -1,0 +1,14 @@
+{
+  "claim_boundary_ok": true,
+  "external_independent_verification_claim": false,
+  "final_blocker_count": 0,
+  "nonconvex_claim": false,
+  "notes": "The final gate passed for the stated convex certificate claim.",
+  "proof_assistant_formalization_claim": false,
+  "proof_boundary": "convex_brass_sharifi_three_test_set_certificate_model_only",
+  "schema_version": "final-certificate-gate-status-v2",
+  "target": "0.833",
+  "target_threshold_final_adjudication_passed": true,
+  "theorem_ready": true,
+  "theorem_ready_candidate": true
+}

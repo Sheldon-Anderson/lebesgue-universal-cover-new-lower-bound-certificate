@@ -1,24 +1,11 @@
 cff-version: 1.2.0
+message: "If you use this repository, please cite it as below."
 title: "A Certified Lower Bound for Lebesgue's Universal Cover Problem"
-message: "If you use this certificate package, please cite the accompanying paper and this repository."
 authors:
   - family-names: Xie
     given-names: Niantao
-version: "v152"
-date-released: "2026-06-13"
+version: "release-candidate"
+date-released: "2026-07-01"
+license: MIT
 repository-code: "https://github.com/Sheldon-Anderson/lebesgue-universal-cover-new-lower-bound-certificate"
-license: "MIT"
-keywords:
-  - Lebesgue universal cover problem
-  - convex geometry
-  - discrete geometry
-  - computational geometry
-  - computer-assisted proof
-  - certificate
-preferred-citation:
-  type: article
-  title: "A Certified Lower Bound for Lebesgue's Universal Cover Problem"
-  authors:
-    - family-names: Xie
-      given-names: Niantao
-  year: 2026
+abstract: "Finite certificate records and deterministic replay code for a certified threshold of 0.833 in the convex Brass-Sharifi three-test-set framework."

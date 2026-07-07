@@ -1,25 +1,119 @@
 {
-  "schema": "ucbs-final-certificate-manifest-v1",
-  "artifacts": [
+  "certified_threshold": "0.833",
+  "claim_scope": "normalized convex Brass-Sharifi three-test-set certificate model",
+  "created_at_utc": "2026-07-07T04:30:15.385946+00:00",
+  "files": [
     {
       "path": "certificate/final_chain/construction_audit_feedback.zip",
-      "sha256": "ded1d29deb13d3cc2203955d6f30a1cfdbbbc267fca9deedc3ba0ae5882dacef",
-      "size_bytes": 43713
+      "sha256": "23bdeacab76bf87c1c4e0190313db347bf1cbcde5678544fdfafbcc263a79041",
+      "size_bytes": 8578
     },
     {
       "path": "certificate/final_chain/final_adjudication_feedback.zip",
-      "sha256": "c75291b2057e1cb7f1c0c3fe17493137ff6fc781af2b5c0ac5036ac2804ab037",
-      "size_bytes": 23607
+      "sha256": "dbdb97d2b7c8246e3f0bd0e62197e61e018966c69d8c23829269f02fd97a2d7f",
+      "size_bytes": 19920
     },
     {
       "path": "certificate/final_chain/per_record_evidence_feedback.zip",
-      "sha256": "99960e1b5e6ae4bbaed2ef6716b50384360a28a827ea2a99fe96ad58cedf7032",
-      "size_bytes": 53173
+      "sha256": "4dc49f28760228f6cf66fd4e1759127a6c54a8f4288273bca64328ea687638b8",
+      "size_bytes": 23991
     },
     {
       "path": "certificate/final_chain/witness_construction_feedback.zip",
-      "sha256": "1c576044d65a770301a362d3aa7e0427024c597803734345d9659221f03eb142",
-      "size_bytes": 102883
+      "sha256": "03c13198c052f9e30d5d3cd2885da5e5917b4ecef3a29a78e684f8c52fa049ef",
+      "size_bytes": 2282
+    },
+    {
+      "path": "certificate/public/CERTIFICATE_INDEX.md",
+      "sha256": "227c0b14440658555d35ced7b0210784be5f0286372874746c2a6b2a5191c253",
+      "size_bytes": 1122
+    },
+    {
+      "path": "certificate/public/PROOF_BOUNDARY.md",
+      "sha256": "381928ec5ad9c0d6bcc3b1ac81fc570702b523183b513ff6d3ed20785ee06438",
+      "size_bytes": 618
+    },
+    {
+      "path": "certificate/public/REPLAY_COMMANDS.md",
+      "sha256": "614a6f6c0fd377a0331705760ace6e8773ab84e0433273723fd5136489644ce1",
+      "size_bytes": 593
+    },
+    {
+      "path": "certificate/public/THEOREM_READY_SUMMARY.md",
+      "sha256": "caa92a1ab68c2bf68c6b7c8bd9efc3ae734ef311e8802d574603f57adf5fe934",
+      "size_bytes": 649
+    },
+    {
+      "path": "certificate/public/data/claim_boundary_freeze.csv",
+      "sha256": "d3675d83ba87b2093df14afcb6bc262fcc7ad88714a0a9c421916b1e7a297c07",
+      "size_bytes": 636
+    },
+    {
+      "path": "certificate/public/data/event_aware_interval_replay_adjudication.csv",
+      "sha256": "e394b998c1c218bc2486962984a25ad3a91cce3d40d8d6a9a3a4b02fbcb7c8f8",
+      "size_bytes": 207725
+    },
+    {
+      "path": "certificate/public/data/final_adjudication_ledger.csv",
+      "sha256": "cff88d13020c0e7c093676b12bc847c6d6e2a8fcfff93d65640e571ec3eceecd",
+      "size_bytes": 713519
+    },
+    {
+      "path": "certificate/public/data/final_aggregation_gate.csv",
+      "sha256": "88ffbc2ff2d415f01d10deabd6c251b53caf1529dc01bff070168872a62cc451",
+      "size_bytes": 358
+    },
+    {
+      "path": "certificate/public/data/final_blocker_matrix.csv",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "size_bytes": 2
+    },
+    {
+      "path": "certificate/public/data/final_replay_only_ledger.csv",
+      "sha256": "4a94ce51e78d407832ecfe7aef077bb15f0a6382509861d2d06a0276ee072427",
+      "size_bytes": 692907
+    },
+    {
+      "path": "certificate/public/data/frozen_record_inventory.csv",
+      "sha256": "519e284abe1c0a23b39ad6ed53d937f6657eedc03f4a095800c078134462c46d",
+      "size_bytes": 2010
+    },
+    {
+      "path": "certificate/public/data/p1_thin_extra_replay_adjudication.csv",
+      "sha256": "e257949e7c35e212722f26f7cba6560f94a1bf59f5b8616aeeda9128d995d3f1",
+      "size_bytes": 4096
+    },
+    {
+      "path": "certificate/public/data/witness_source_reconstruction_adjudication.csv",
+      "sha256": "d352cccf1b78499288c7c31209c1b09d0503059985b631bfcfa21a5cd767f28f",
+      "size_bytes": 46821
+    },
+    {
+      "path": "certificate/public/report/final_theorem_ready_adjudication_report.md",
+      "sha256": "f13e16afbdf27a0add6221cea19e3587cea7c9b3caa2de4c4c8a2b6c9c0f12b9",
+      "size_bytes": 2870
+    },
+    {
+      "path": "certificate/public/status/certificate_status.json",
+      "sha256": "f2999cede1abd0855f1b1306724b6adf7740bda166434efefd45ecef07822a41",
+      "size_bytes": 1103
+    },
+    {
+      "path": "certificate/public/status/claim_freeze.status.json",
+      "sha256": "9d85128b8425b315d53db7b2c1ef0a7cb94b326188c9d8e1aa7633abe9508fee",
+      "size_bytes": 349
+    },
+    {
+      "path": "certificate/public/status/final_adjudication.status.json",
+      "sha256": "03feb96958769024c4b3c9d081a10c9ff46d7b683025d78e7f1807b80f6ff6e2",
+      "size_bytes": 684
+    },
+    {
+      "path": "certificate/public/status/theorem_ready_gate.status.json",
+      "sha256": "c6a7787d566bf9078ffa12afaed4c8e83a56c6fad2cc099b8fde093711fb4a89",
+      "size_bytes": 538
     }
-  ]
+  ],
+  "final_blocker_count": 0,
+  "theorem_ready": true
 }

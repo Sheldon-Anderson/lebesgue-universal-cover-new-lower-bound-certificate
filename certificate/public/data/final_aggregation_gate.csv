@@ -1,0 +1,8 @@
+gate,passed,details
+manifest_validation,True,49/49 manifest rows validated
+freeze_row_count,True,freeze_rows=3411 expected=3411
+event_aware_interval_replay,True,493/493
+witness_source_reconstruction,True,117/117
+p1_thin_extra_replay,True,11/11
+final_replay_only,True,2790/2790
+final_aggregation,True,proof_grade_blocker_rows=0 unknown_requirements=0
