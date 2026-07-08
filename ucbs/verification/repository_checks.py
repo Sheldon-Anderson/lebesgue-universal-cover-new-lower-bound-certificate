@@ -2,33 +2,40 @@
 from __future__ import annotations
 
 import ast
-import csv
-import json
-import re
 import shutil
-import subprocess
-import sys
+import tomllib
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-ALLOWED_RAW_STAGE_FILES = {
-    "docs/artifact_structure.md",
-    "docs/data_dictionary.md",
-    "docs/faq.md",
-    "certificate/public/CERTIFICATE_INDEX.md",
-}
-"""Public docs allowed to mention raw v133--v136 provenance labels."""
-
-RAW_STAGE_PATTERN = re.compile(r"\bv13[3-6]\b", re.IGNORECASE)
-"""Raw internal generation-stage labels preserved only for provenance."""
-
+from ucbs.cli.logging import close_run_log, log_to_file, start_run_log
+from ucbs.config.repository_policy import (
+    ALLOWED_RAW_STAGE_FILES,
+    FORBIDDEN_BYTECODE_DIRECTORY_NAMES,
+    FORBIDDEN_BYTECODE_SUFFIXES,
+    FORBIDDEN_GENERATED_FILE_SUFFIXES,
+    FORBIDDEN_REPOSITORY_PATHS,
+    PUBLIC_SANITIZATION_PATTERNS,
+    RAW_STAGE_PATTERN,
+    REQUIRED_REPOSITORY_PATHS,
+    TEXT_FILE_NAMES_REQUIRING_FINAL_NEWLINE,
+    TEXT_FILE_SUFFIXES_REQUIRING_FINAL_NEWLINE,
+)
+from ucbs.verification.archive_mirror import check_archive_public_mirror
 from ucbs.verification.artifact_checks import verify_key_artifact_hashes
 from ucbs.verification.claim_boundary import check_claim_boundary
+from ucbs.verification.diagnostics import (
+    collect_failed,
+    with_summary,
+    write_csv,
+    write_json,
+)
 from ucbs.verification.markdown_math import check_markdown_math
 from ucbs.verification.narrative_lint import check_narrative_lint
+from ucbs.verification.paper_claim_boundary import check_paper_claim_boundary
+from ucbs.verification.release_consistency import check_release_consistency
 from ucbs.certificate.chain_replay import verify_certificate
 
 
@@ -41,51 +48,10 @@ class RepositoryCheckResult:
     feedback: Path
 
 
-def _truthy(value: Any) -> bool:
-    """Interpret common serialized Boolean representations."""
-    return value is True or str(value).strip().lower() in {"true", "1", "yes", "passed", "ok"}
+def _append_log(log_path: Path, message: str, level: str = "INFO") -> None:
+    """Append one English repository-check log line with loguru."""
+    log_to_file(log_path, message, level=level)
 
-
-def _write_csv(path: Path, rows: Iterable[dict[str, Any]], fieldnames: list[str] | None = None) -> None:
-    """Write diagnostic rows to CSV with a stable header."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    rows = list(rows)
-    fields: list[str] = list(fieldnames or [])
-    for row in rows:
-        for key in row:
-            if key not in fields:
-                fields.append(key)
-    if not fields:
-        fields = ["check", "issue_count", "passed", "summary"]
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write a JSON object to disk."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def _summary_row(name: str, passed: bool, issue_count: int, summary: str) -> dict[str, Any]:
-    """Build a standard diagnostic summary row."""
-    return {"check": f"{name}_summary", "issue_count": issue_count, "passed": passed, "summary": summary}
-
-
-def _with_summary(name: str, rows: list[dict[str, Any]], ok_summary: str, bad_summary: str) -> list[dict[str, Any]]:
-    """Append a summary row to diagnostic rows."""
-    issue_count = sum(1 for row in rows if row.get("passed") is False or str(row.get("passed", "")).lower() == "false")
-    passed = issue_count == 0
-    return [*rows, _summary_row(name, passed, issue_count, ok_summary if passed else bad_summary)]
-
-
-def _append_log(log_path: Path, message: str) -> None:
-    """Append one UTC-stamped line to the repository-check log."""
-    timestamp = datetime.now(timezone.utc).isoformat()
-    with log_path.open("a", encoding="utf-8") as handle:
-        handle.write(f"[{timestamp}] {message}\n")
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -96,14 +62,103 @@ def _rel(path: Path, root: Path) -> str:
         return f"<external>/{path.name}"
 
 
+def check_bytecode_artifacts(root: Path) -> list[dict[str, Any]]:
+    """Return compiled Python artifacts that must not ship in the release.
+
+    Public release archives should contain source files and certificate records,
+    not interpreter-generated caches. The check deliberately covers both cache
+    directories and compiled-extension suffixes so repository checks catch these
+    artifacts before packaging.
+    """
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*")):
+        rel = _rel(path, root)
+        if path.is_dir() and path.name in FORBIDDEN_BYTECODE_DIRECTORY_NAMES:
+            rows.append({
+                "check": "bytecode_artifact",
+                "path": rel,
+                "passed": False,
+                "summary": "compiled Python cache directory must not be included",
+            })
+        elif path.is_file() and path.suffix in FORBIDDEN_BYTECODE_SUFFIXES:
+            rows.append({
+                "check": "bytecode_artifact",
+                "path": rel,
+                "passed": False,
+                "summary": "compiled Python artifact must not be included",
+            })
+    return rows
+
+
+def _is_release_tree_file(path: Path, root: Path) -> bool:
+    """Return whether a path belongs to the packaged release tree."""
+    try:
+        rel = path.relative_to(root)
+    except ValueError:
+        return False
+    return bool(rel.parts) and rel.parts[0] not in {".git", "runs", ".pytest_cache"}
+
+
+def check_generated_build_artifacts(root: Path) -> list[dict[str, Any]]:
+    """Return LaTeX or build-generated files that must not ship."""
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or not _is_release_tree_file(path, root):
+            continue
+        rel = _rel(path, root)
+        if any(rel.endswith(suffix) for suffix in FORBIDDEN_GENERATED_FILE_SUFFIXES):
+            rows.append({
+                "check": "generated_build_artifact",
+                "path": rel,
+                "passed": False,
+                "summary": "generated build or LaTeX artifact must not be included",
+            })
+    return rows
+
+
+def check_text_file_final_newlines(root: Path) -> list[dict[str, Any]]:
+    """Return text files that do not end with a final newline."""
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or not _is_release_tree_file(path, root):
+            continue
+        if path.suffix not in TEXT_FILE_SUFFIXES_REQUIRING_FINAL_NEWLINE and path.name not in TEXT_FILE_NAMES_REQUIRING_FINAL_NEWLINE:
+            continue
+        data = path.read_bytes()
+        if data and not data.endswith(b"\n"):
+            rows.append({
+                "check": "text_file_final_newline",
+                "path": _rel(path, root),
+                "passed": False,
+                "summary": "text file must end with a newline",
+            })
+    return rows
+
+
 def check_python_compile(root: Path) -> list[dict[str, Any]]:
-    """Compile Python source files under ``ucbs``, ``scripts``, and ``tests``."""
+    """Compile public Python sources in memory without writing cache files.
+
+    The check intentionally uses Python's built-in ``compile`` rather than
+    ``py_compile`` because ``py_compile`` writes ``.pyc`` files by design. A
+    release audit should validate syntax and bytecode generation while leaving
+    the source tree bytecode-free.
+    """
     files = sorted([*root.glob("ucbs/**/*.py"), *root.glob("scripts/*.py"), *root.glob("tests/*.py")])
     if not files:
         return [{"check": "python_compile", "passed": False, "file_count": 0, "output": "no Python files found"}]
-    cmd = [sys.executable, "-m", "py_compile", *map(str, files)]
-    proc = subprocess.run(cmd, cwd=root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
-    return [{"check": "python_compile", "passed": proc.returncode == 0, "file_count": len(files), "output": proc.stdout[-2000:]}]
+    failures: list[str] = []
+    for path in files:
+        rel = _rel(path, root)
+        try:
+            compile(path.read_text(encoding="utf-8"), rel, "exec")
+        except SyntaxError as exc:
+            failures.append(f"{rel}:{exc.lineno or 0}: {exc.msg}")
+    return [{
+        "check": "python_compile",
+        "passed": not failures,
+        "file_count": len(files),
+        "output": "\n".join(failures)[-2000:],
+    }]
 
 
 
@@ -152,78 +207,41 @@ def check_script_entry_points(root: Path) -> list[dict[str, Any]]:
 
 
 def check_pyproject_config(root: Path) -> list[dict[str, Any]]:
-    """Check that packaging metadata points to the public ``ucbs`` package."""
+    """Check parsed packaging metadata for the public ``ucbs`` package."""
     path = root / "pyproject.toml"
     if not path.exists():
         return [{"check": "pyproject_exists", "passed": False, "path": "pyproject.toml", "summary": "missing pyproject.toml"}]
-    text = path.read_text(encoding="utf-8")
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as exc:
+        return [
+            {"check": "pyproject_exists", "passed": True, "path": "pyproject.toml", "summary": "pyproject.toml is present"},
+            {"check": "pyproject_parse", "passed": False, "path": "pyproject.toml", "summary": f"pyproject.toml is invalid TOML: {exc}"},
+        ]
+    tool = data.get("tool", {}) if isinstance(data, dict) else {}
+    setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
+    packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
+    find = packages.get("find", {}) if isinstance(packages, dict) else {}
+    include = find.get("include", []) if isinstance(find, dict) else []
+    scripts = data.get("project", {}).get("scripts", {}) if isinstance(data.get("project", {}), dict) else {}
     return [
         {"check": "pyproject_exists", "passed": True, "path": "pyproject.toml", "summary": "pyproject.toml is present"},
-        {"check": "pyproject_uses_ucbs_package", "passed": "ucbs*" in text or "ucbs" in text, "path": "pyproject.toml", "summary": "package discovery includes ucbs"},
-        {"check": "pyproject_no_stale_app_package", "passed": "packages = [\"app\"]" not in text and "packages = ['app']" not in text, "path": "pyproject.toml", "summary": "stale app package is not referenced"},
-        {"check": "pyproject_console_scripts", "passed": "[project.scripts]" in text and "ucbs-verify-certificate" in text, "path": "pyproject.toml", "summary": "console-script entry points are declared"},
-        {"check": "pyproject_no_release_zip_entry", "passed": "ucbs-make-release-zip" not in text, "path": "pyproject.toml", "summary": "release-zip helper is not exposed as a console script"},
+        {"check": "pyproject_parse", "passed": True, "path": "pyproject.toml", "summary": "pyproject.toml parses as TOML"},
+        {"check": "pyproject_uses_ucbs_package", "passed": any(str(item).startswith("ucbs") for item in include), "path": "pyproject.toml", "summary": "package discovery includes ucbs"},
+        {"check": "pyproject_no_stale_app_package", "passed": "app" not in {str(item) for item in include}, "path": "pyproject.toml", "summary": "stale app package is not referenced"},
+        {"check": "pyproject_console_scripts", "passed": "ucbs-verify-certificate" in scripts, "path": "pyproject.toml", "summary": "console-script entry points are declared"},
+        {"check": "pyproject_no_release_zip_entry", "passed": "ucbs-make-release-zip" not in scripts, "path": "pyproject.toml", "summary": "release-zip helper is not exposed as a console script"},
     ]
 
 
 
 def check_layout(root: Path) -> list[dict[str, Any]]:
     """Check that the public repository layout is clean and intentional."""
-    required = [
-        "README.md",
-        "README.zh-CN.md",
-        "CITATION.cff",
-        "pyproject.toml",
-        "ucbs",
-        "ucbs/certificate",
-        "ucbs/verification",
-        "ucbs/cli",
-        "scripts",
-        "scripts/_bootstrap.py",
-        "scripts/verify_certificate.py",
-        "scripts/check_repository.py",
-        "scripts/replay_certificate_chain.py",
-        "scripts/replay_per_record_evidence.py",
-        "scripts/replay_construction_audit.py",
-        "scripts/replay_witness_construction.py",
-        "scripts/replay_final_adjudication.py",
-        "certificate/final_chain",
-        "certificate/manifest",
-        "certificate/public",
-        "docs/artifact_policy.md",
-        "docs/claim_scope.md",
-        "docs/expected_outputs.md",
-        "docs/reproducibility.md",
-        "docs/data_dictionary.md",
-        "docs/artifact_structure.md",
-        "docs/verification_design.md",
-        "certificate/manifest/CHECKSUM.md",
-        "certificate/public/CERTIFICATE_INDEX.md",
-        "paper",
-        "paper/A_Certified_Lower_Bound_for_Lebesgues_Universal_Cover_Problem.pdf",
-        "tests",
-    ]
-    forbidden = [
-        "release",
-        "scripts/stages",
-        "ucbs/pipeline",
-        "ucbs/target_083201",
-        "ucbs/legacy_bs0832",
-        "certificate/target_083201",
-        "certificate/legacy_bs0832",
-        "paper/preview",
-        "paper/pdf",
-        "certificate/public/README.md",
-        "scripts/make_release_zip.py",
-        "ucbs/cli/make_release_zip.py",
-        "scripts/verify_theorem_ready.py",
-        "scripts/replay_inner_witness_certificate.py",
-    ]
     rows: list[dict[str, Any]] = []
-    for rel in required:
+    for rel in REQUIRED_REPOSITORY_PATHS:
         exists = (root / rel).exists()
         rows.append({"check": "layout_required", "path": rel, "required": True, "exists": exists, "passed": exists})
-    for rel in forbidden:
+    for rel in FORBIDDEN_REPOSITORY_PATHS:
         exists = (root / rel).exists()
         if exists:
             rows.append({"check": "layout_forbidden", "path": rel, "forbidden": True, "exists": True, "passed": False})
@@ -333,16 +351,6 @@ def check_raw_stage_label_policy(root: Path) -> list[dict[str, Any]]:
 
 
 
-PUBLIC_SANITIZATION_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"[A-Za-z]:\\"), "Windows absolute path"),
-    (re.compile(r"\\Users\\|/Users/"), "user-home absolute path"),
-    (re.compile(r"local_runner", re.I), "local runner label"),
-    (re.compile(r"local-default", re.I), "local workload label"),
-    (re.compile(r"feedback_zip_path", re.I), "machine-local feedback path field"),
-    (re.compile(r"log_path", re.I), "machine-local log path field"),
-    (re.compile(r"v144_feedback_zip", re.I), "pre-release feedback path field"),
-]
-
 
 def check_public_release_sanitization(root: Path) -> list[dict[str, Any]]:
     """Return machine-local traces left in public status or report files."""
@@ -370,15 +378,6 @@ def check_public_release_sanitization(root: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _collect_failed(diagnostics: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
-    """Collect rows whose ``passed`` field is false-like."""
-    failed: list[dict[str, Any]] = []
-    for name, rows in diagnostics.items():
-        for row in rows:
-            if "passed" in row and not _truthy(row["passed"]):
-                failed.append({"diagnostic": name, **row})
-    return failed
-
 
 def run_repository_check(
     root: Path,
@@ -398,55 +397,100 @@ def run_repository_check(
     for sub in ["diagnostics", "status", "log", "report"]:
         (run_dir / sub).mkdir(parents=True, exist_ok=True)
     log = run_dir / "log" / "repository_check.log"
-    log.write_text(
-        "repository check started " + datetime.now(timezone.utc).isoformat() + "\n"
-        "root=<repository-root>\n"
-        f"run_id={run_id}\n"
-        f"log_level={log_level}\n",
-        encoding="utf-8",
+    start_run_log(
+        log,
+        [
+            "repository check started",
+            "root=<repository-root>",
+            f"run_id={run_id}",
+            f"log_level={log_level}",
+        ],
+        level=log_level,
     )
 
     diagnostics: dict[str, list[dict[str, Any]]] = {}
-    _append_log(log, "checking Python source compilation")
-    diagnostics["python_compile"] = _with_summary("python_compile", check_python_compile(root), "Python sources compile", "Python source compilation failed")
+    _append_log(log, "checking for pre-existing Python bytecode artifacts", level=log_level)
+    diagnostics["bytecode_artifacts_pre"] = with_summary(
+        "bytecode_artifacts_pre",
+        check_bytecode_artifacts(root),
+        "no Python bytecode artifact found before compilation",
+        "Python bytecode artifact found before compilation",
+    )
 
-    _append_log(log, "checking pyproject package metadata")
-    diagnostics["pyproject"] = _with_summary("pyproject", check_pyproject_config(root), "pyproject package metadata is consistent", "pyproject package metadata failed")
+    _append_log(log, "checking generated build artifacts", level=log_level)
+    diagnostics["generated_build_artifacts"] = with_summary(
+        "generated_build_artifacts",
+        check_generated_build_artifacts(root),
+        "no generated build artifact found",
+        "generated build artifact found",
+    )
 
-    _append_log(log, "checking public script entry points")
-    diagnostics["script_entry_points"] = _with_summary("script_entry_points", check_script_entry_points(root), "public scripts delegate to package entry points", "public script entry-point issue found")
+    _append_log(log, "checking text-file final newlines", level=log_level)
+    diagnostics["text_file_final_newlines"] = with_summary(
+        "text_file_final_newlines",
+        check_text_file_final_newlines(root),
+        "all checked text files end with a newline",
+        "text file missing final newline",
+    )
 
-    _append_log(log, "checking repository layout")
-    diagnostics["layout"] = _with_summary("layout", check_layout(root), "repository layout is clean", "repository layout issue found")
+    _append_log(log, "checking Python source compilation", level=log_level)
+    diagnostics["python_compile"] = with_summary("python_compile", check_python_compile(root), "Python sources compile", "Python source compilation failed")
 
-    _append_log(log, "checking empty directories")
-    diagnostics["empty_directories"] = _with_summary("empty_directories", check_empty_directories(root), "no unintended empty directory found", "empty directory issue found")
+    _append_log(log, "checking for Python bytecode artifacts after compilation", level=log_level)
+    diagnostics["bytecode_artifacts_post"] = with_summary(
+        "bytecode_artifacts_post",
+        check_bytecode_artifacts(root),
+        "Python compilation left no bytecode artifact",
+        "Python compilation left a bytecode artifact",
+    )
 
-    _append_log(log, "checking English-only Python comments and docstrings")
-    diagnostics["english_comments"] = _with_summary("english_comments", check_english_only_comments(root), "no CJK characters found in Python sources checked", "CJK characters found in Python sources checked")
+    _append_log(log, "checking pyproject package metadata", level=log_level)
+    diagnostics["pyproject"] = with_summary("pyproject", check_pyproject_config(root), "pyproject package metadata is consistent", "pyproject package metadata failed")
 
-    _append_log(log, "checking direct print calls in public Python code")
-    diagnostics["public_python_no_print"] = _with_summary("public_python_no_print", check_public_python_no_print(root), "public Python code does not call print directly", "public Python print call found")
+    _append_log(log, "checking release/version consistency", level=log_level)
+    diagnostics["release_consistency"] = with_summary("release_consistency", check_release_consistency(root), "release metadata and README coverage are consistent", "release metadata or README coverage issue found")
 
-    _append_log(log, "checking raw v13x provenance labels")
-    diagnostics["raw_stage_label_policy"] = _with_summary("raw_stage_label_policy", check_raw_stage_label_policy(root), "raw v13x labels appear only in provenance docs", "raw v13x label found outside allowed provenance docs")
+    _append_log(log, "checking public script entry points", level=log_level)
+    diagnostics["script_entry_points"] = with_summary("script_entry_points", check_script_entry_points(root), "public scripts delegate to package entry points", "public script entry-point issue found")
 
-    _append_log(log, "checking public status and report sanitization")
-    diagnostics["public_release_sanitization"] = _with_summary("public_release_sanitization", check_public_release_sanitization(root), "no machine-local public-release trace found", "machine-local public-release trace found")
+    _append_log(log, "checking repository layout", level=log_level)
+    diagnostics["layout"] = with_summary("layout", check_layout(root), "repository layout is clean", "repository layout issue found")
 
-    _append_log(log, "checking clean public narrative")
-    diagnostics["narrative_lint"] = _with_summary("narrative_lint", check_narrative_lint(root), "public narrative is clean", "forbidden clean-story wording found")
+    _append_log(log, "checking empty directories", level=log_level)
+    diagnostics["empty_directories"] = with_summary("empty_directories", check_empty_directories(root), "no unintended empty directory found", "empty directory issue found")
 
-    _append_log(log, "checking public Markdown math rendering fragments")
-    diagnostics["readme_math"] = _with_summary("readme_math", check_markdown_math(root), "no markdown math lint issue found", "markdown math lint issue found")
+    _append_log(log, "checking English-only Python comments and docstrings", level=log_level)
+    diagnostics["english_comments"] = with_summary("english_comments", check_english_only_comments(root), "no CJK characters found in Python sources checked", "CJK characters found in Python sources checked")
 
-    _append_log(log, "checking public claim boundary")
-    diagnostics["claim_boundary"] = _with_summary("claim_boundary", check_claim_boundary(root), "no forbidden public-claim pattern found", "forbidden public-claim pattern found")
+    _append_log(log, "checking direct print calls in public Python code", level=log_level)
+    diagnostics["public_python_no_print"] = with_summary("public_python_no_print", check_public_python_no_print(root), "public Python code does not call print directly", "public Python print call found")
 
-    _append_log(log, "checking certificate-chain artifact hashes")
-    diagnostics["artifact_hashes"] = _with_summary("artifact_hashes", verify_key_artifact_hashes(root), "certificate-chain artifact hashes passed", "artifact hash issue found")
+    _append_log(log, "checking raw v13x provenance labels", level=log_level)
+    diagnostics["raw_stage_label_policy"] = with_summary("raw_stage_label_policy", check_raw_stage_label_policy(root), "raw v13x labels appear only in provenance docs", "raw v13x label found outside allowed provenance docs")
 
-    _append_log(log, "running certificate verification as part of repository check")
+    _append_log(log, "checking public status and report sanitization", level=log_level)
+    diagnostics["public_release_sanitization"] = with_summary("public_release_sanitization", check_public_release_sanitization(root), "no machine-local public-release trace found", "machine-local public-release trace found")
+
+    _append_log(log, "checking clean public narrative", level=log_level)
+    diagnostics["narrative_lint"] = with_summary("narrative_lint", check_narrative_lint(root), "public narrative is clean", "forbidden clean-story wording found")
+
+    _append_log(log, "checking public Markdown math rendering fragments", level=log_level)
+    diagnostics["readme_math"] = with_summary("readme_math", check_markdown_math(root), "no markdown math lint issue found", "markdown math lint issue found")
+
+    _append_log(log, "checking public claim boundary", level=log_level)
+    diagnostics["claim_boundary"] = with_summary("claim_boundary", check_claim_boundary(root), "no forbidden public-claim pattern found", "forbidden public-claim pattern found")
+
+    _append_log(log, "checking LaTeX paper claim boundary", level=log_level)
+    diagnostics["paper_claim_boundary"] = with_summary("paper_claim_boundary", check_paper_claim_boundary(root), "paper claim boundary is clean", "paper claim-boundary issue found")
+
+
+    _append_log(log, "checking certificate-chain artifact hashes", level=log_level)
+    diagnostics["artifact_hashes"] = with_summary("artifact_hashes", verify_key_artifact_hashes(root), "certificate-chain artifact hashes passed", "artifact hash issue found")
+
+    _append_log(log, "checking archive/public mirror consistency", level=log_level)
+    diagnostics["archive_public_mirror"] = with_summary("archive_public_mirror", check_archive_public_mirror(root), "expanded public records match archive members", "archive/public mirror issue found")
+
+    _append_log(log, "running certificate verification as part of repository check", level=log_level)
     theorem = verify_certificate(
         root=root,
         artifact_root=artifact_root,
@@ -457,7 +501,7 @@ def run_repository_check(
         run_id="certificate_verification",
         log_level=log_level,
     )
-    diagnostics["certificate_verification"] = _with_summary(
+    diagnostics["certificate_verification"] = with_summary(
         "certificate_verification",
         [{"check": "certificate_verification", "passed": theorem.status == "passed", "feedback": _rel(theorem.output_feedback, root)}],
         "certificate verification passed",
@@ -465,13 +509,13 @@ def run_repository_check(
     )
 
     for name, rows in diagnostics.items():
-        _write_csv(run_dir / "diagnostics" / f"{name}.csv", rows)
+        write_csv(run_dir / "diagnostics" / f"{name}.csv", rows)
 
-    failed = _collect_failed(diagnostics)
+    failed = collect_failed(diagnostics)
     status = "passed" if not failed else "failed"
     feedback = run_dir / "repository_check_feedback.zip"
     summary = {
-        "schema": "ucbs-public-repository-check-v9",
+        "schema": "ucbs-public-repository-check-v10",
         "status": status,
         "failed_step_count": len(failed),
         "run_id": run_id,
@@ -479,26 +523,28 @@ def run_repository_check(
         "certificate_verification_feedback": _rel(theorem.output_feedback, root),
         "repository_check_feedback": _rel(feedback, root),
     }
-    _write_json(run_dir / "status" / "repository_check.status.json", summary)
-    _write_json(run_dir / "summary.json", summary)
+    write_json(run_dir / "status" / "repository_check.status.json", summary)
+    write_json(run_dir / "summary.json", summary)
 
     if failed:
-        _write_csv(run_dir / "diagnostics" / "failed_checks.csv", failed)
-        _append_log(log, f"repository check failed with {len(failed)} failed diagnostic rows")
+        write_csv(run_dir / "diagnostics" / "failed_checks.csv", failed)
+        _append_log(log, f"repository check failed with {len(failed)} failed diagnostic rows", level=log_level)
     else:
-        _write_csv(run_dir / "diagnostics" / "failed_checks.csv", [_summary_row("failed_checks", True, 0, "no failed repository diagnostic row found")])
-        _append_log(log, "repository check passed")
+        write_csv(run_dir / "diagnostics" / "failed_checks.csv", [{"check": "failed_checks_summary", "issue_count": 0, "passed": True, "summary": "no failed repository diagnostic row found"}])
+        _append_log(log, "repository check passed", level=log_level)
 
     (run_dir / "report" / "repository_check.md").write_text(
         "# Repository check\n\n"
         f"Status: `{status}`.\n\n"
         f"Failed diagnostic rows: `{len(failed)}`.\n\n"
-        "This check covers Python compilation, package metadata, repository layout, "
-        "empty directories, clean public narrative, public Markdown math, claim boundaries, "
-        "certificate-chain artifact hashes, and the final certificate verification.\n",
+        "This check covers Python compilation, package metadata, release/version consistency, "
+        "repository layout, bytecode-artifact exclusion, generated-artifact exclusion, final-newline hygiene, empty directories, "
+        "clean public narrative, public Markdown math, claim boundaries, paper claim-boundary checks, "
+        "certificate-chain artifact hashes, archive/public mirror consistency, and the final certificate verification.\n",
         encoding="utf-8",
     )
 
+    close_run_log(log)
     with zipfile.ZipFile(feedback, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(run_dir.rglob("*")):
             if path.is_file() and path != feedback:

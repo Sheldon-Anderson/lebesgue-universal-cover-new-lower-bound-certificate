@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import argparse
 
-LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR"]
-"""Supported logging-level labels recorded in run logs."""
+from ucbs.config.logging_config import VALID_LOG_LEVELS
 
 
 def add_root_argument(parser: argparse.ArgumentParser) -> None:
@@ -21,8 +20,8 @@ def add_log_level_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--log-level",
         default="INFO",
-        choices=LOG_LEVELS,
-        help="Logging level label recorded in output logs.",
+        choices=sorted(VALID_LOG_LEVELS),
+        help="Minimum logging level for generated output logs.",
     )
 
 

@@ -29,6 +29,11 @@
 \setlength{\intextsep}{8pt plus 2pt minus 2pt}
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.14}
+% Use vertically centered tabularx columns for the balanced table layouts.
+\renewcommand{\tabularxcolumn}[1]{m{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Q}[1]{>{\raggedleft\arraybackslash}p{#1}}
 \setlist[itemize]{topsep=3pt,itemsep=2pt,parsep=0pt,leftmargin=2.2em}
 \setlist[enumerate,1]{label=(\roman*),leftmargin=2.8em,labelwidth=2.1em,labelsep=0.6em,align=left,itemindent=0pt,topsep=3pt,itemsep=2pt,parsep=0pt}
 \allowdisplaybreaks[2]
@@ -49,11 +54,11 @@
 \maketitle
 
 \begin{abstract}
-Lebesgue's universal cover problem asks for a planar set of least possible area that contains a congruent copy of every planar set of diameter at most one.  We work in the convex Brass--Sharifi three-test-set framework, where the test sets are a closed disk, an equilateral triangle, and a regular pentagon of diameter one.  For each normalized placement \(\paramv\), let \(\Area(\paramv)\) denote the area of the convex hull of these three test sets.  We construct a finite certificate proving
+Lebesgue's universal cover problem asks for the infimum of the areas of planar sets that contain a congruent copy of every planar set of diameter at most one.  We work in the convex Brass--Sharifi three-test-set framework, where the test sets are a closed disk, an equilateral triangle, and a regular pentagon of diameter one.  For each normalized placement \(\paramv\), let \(\Area(\paramv)\) denote the area of the convex hull of these three test sets.  We construct a finite certificate proving
 \[
 \Area(\paramv)\ge 0.833
 \]
-throughout the admissible normalized domain.  The threshold \(0.833\) gives a certified strengthening of the Brass--Sharifi lower bound \(0.832\) within the same convex three-test-set framework.
+throughout the admissible normalized domain.  The threshold \(0.833\) yields a certified improvement over the Brass--Sharifi lower bound \(0.832\) within the same convex three-test-set framework.
 
 The proof is a finite-cover argument.  The admissible domain is covered by finitely many parameter domains, and each domain carries a local lower-bound certificate.  The non-witness domains are certified by supporting local records.  On the witness domains, the local bound is obtained from an inner-witness polygon construction.  The witness points lie in the three test sets and determine an ordered polygonal region certified to be simple and positively oriented.  Its area is bounded below by interval orientation and shoelace estimates.  Since this certified polygonal region lies inside the corresponding convex hull, its area gives a lower bound for the hull area.  Combining the local inequalities with the finite cover yields
 \[
@@ -78,7 +83,7 @@ Set
 \[
 \acvx=\inf_{K\in\Ucvx}\area(K).
 \]
-All lower-bound statements below concern this convex quantity.  For background on the general universal cover problem, see Baez, Bagdasaryan, and Gibbs~\cite{baez-bagdasaryan-gibbs}; a small convex covering construction is described by Gibbs~\cite{gibbs}.
+Here and below, \(\area\) denotes planar Lebesgue area.  All lower-bound statements below concern this convex quantity.  For background on the general universal cover problem, see Baez, Bagdasaryan, and Gibbs~\cite{baez-bagdasaryan-gibbs}; a small-area convex covering construction is described by Gibbs~\cite{gibbs}.
 
 Brass and Sharifi introduced the three-test-set framework used here and obtained the lower bound \(0.832\) in this convex setting~\cite{brass-sharifi}.  For comparison on the upper-bound side, Gibbs constructed a convex universal cover of area \(0.8440935944\)~\cite{gibbs}.  The test sets are a closed disk, an equilateral triangle, and a regular pentagon of diameter one.  Their normalization turns the relative placement problem into a finite-dimensional problem for the area of the convex hull of these three sets.  The present work certifies the threshold
 \[
@@ -86,7 +91,7 @@ Brass and Sharifi introduced the three-test-set framework used here and obtained
 \]
 within the same normalized convex setting.  We regard \(0.833\) as an exact decimal threshold.
 
-Although the absolute increment from \(0.832\) to \(0.833\) is \(0.001\), the improvement is substantial in the present problem.  Relative to the interval between the Brass--Sharifi lower bound \(0.832\) and Gibbs' convex upper bound \(0.8440935944\), it closes approximately \(8.3\%\) of the previously recorded gap.  The finite certificate gives a reproducible verification of the improved bound.  The proof is represented by finite records.  These include supporting local records for the non-witness domains, explicit witness-domain polygon certificates on the witness domains, interval orientation and shoelace lower endpoints, and a final finite-cover aggregation.  The accompanying finite records contain the checks used in the proof, and the verification code replays them deterministically.
+The absolute increment from \(0.832\) to \(0.833\) is \(0.001\).  Relative to the interval between the Brass--Sharifi lower bound \(0.832\) and the convex upper bound constructed by Gibbs, \(0.8440935944\), it closes approximately \(8.3\%\) of that gap.  The finite certificate gives a reproducible finite-record verification of the threshold.  Its records include supporting local certificates for the non-witness domains, explicit witness-domain polygon certificates, interval orientation and shoelace lower endpoints, and a final finite-cover aggregation.  The verification code replays these finite checks deterministically.
 
 The structure of the proof is as follows.  First, a convex universal cover contains congruent copies of the three test sets, and convexity forces it to contain their convex hull.  Second, the Brass--Sharifi normalization represents the hull by a parameter \(\paramv\) in an admissible domain \(\Oadm\).  Third, the certificate covers \(\Oadm\) by finitely many domains and verifies a local lower bound on each one.  Fourth, the finite-cover implication gives \(\Area(\paramv)\ge\target\) throughout \(\Oadm\), and taking the infimum over convex universal covers gives \(\acvx\ge\target\).
 
@@ -96,7 +101,7 @@ The structure of the proof is as follows.  First, a convex universal cover conta
 
 \subsection{The three test sets}
 
-Let \(\Cdisc\), \(\Ttri\), and \(\Pfive\) be, respectively, fixed reference copies of a closed disk, an equilateral triangle, and a regular pentagon of diameter one.  The disk has radius \(1/2\).  The reference disk is centered at the origin.  The reference triangle and pentagon have fixed reference positions and orientations.  The three sets \(\Cdisc,\Ttri,\Pfive\) are the necessary test sets used in the lower-bound argument: every universal cover contains a congruent copy of each of them.  Thus, if \(K\in\Ucvx\), then \(K\) contains three such copies; since \(K\) is convex, it also contains their convex hull.
+Let \(\Cdisc\), \(\Ttri\), and \(\Pfive\) be, respectively, fixed reference copies of a closed disk, an equilateral triangle, and a regular pentagon of diameter one.  The disk has radius \(1/2\).  The reference disk is centered at the origin.  The reference triangle and pentagon have fixed reference positions and orientations.  The three sets \(\Cdisc,\Ttri,\Pfive\) are the necessary test sets used in the lower-bound argument: every universal cover contains a congruent copy of each of them.  Thus, if \(K\in\Ucvx\), then after choosing one congruent copy of each test set inside \(K\), convexity of \(K\) implies that \(K\) contains the convex hull of those three chosen copies.
 
 \subsection{Normalized placements}
 
@@ -112,7 +117,7 @@ Set
 \[
 X(\paramv)=\Cdisc\cup(\Ttri+\transTri)\cup(R_\rho\Pfive+\transPent),
 \qquad
-\Hull(\paramv)=\conv X(\paramv),
+\Hull(\paramv)=\conv\bigl(X(\paramv)\bigr),
 \]
 and set
 \[
@@ -128,15 +133,15 @@ Here \(\conv\) denotes the closed convex hull.  Thus \(\Area\) denotes the hull-
 Denote by \(\Oadm\) the admissible normalized placement domain in the Brass--Sharifi framework.  This is a recorded subset of the five-dimensional parameter space with coordinates \((\rho,x_3,y_3,x_5,y_5)\).  Its points represent normalized relative placements satisfying the Brass--Sharifi admissibility conditions after the normalization and symmetry reductions used for the three test sets.
 
 \paragraph{Input normalization principle.}
-The present paper takes the following Brass--Sharifi normalization principle as an input theorem and treats \(\Oadm\) as the input domain for the finite certificate.  It does not rederive the full symbolic reduction from the unreduced placement space.  For every \(K\in\Ucvx\), there exists \(\paramv\in\Oadm\) such that
+The present paper uses the Brass--Sharifi normalization principle~\cite{brass-sharifi} as an input theorem and treats \(\Oadm\) as the input domain for the finite certificate.  It does not rederive the full symbolic reduction from the unreduced placement space.  For every \(K\in\Ucvx\), after applying a global Euclidean isometry if necessary, there exists \(\paramv\in\Oadm\) such that
 \[
 \Hull(\paramv)\subseteq K.
 \]
-Consequently, a uniform lower bound for \(\Area(\paramv)\) on \(\Oadm\) gives a lower bound for \(\area(K)\) for every convex universal cover \(K\).  This is the only point at which the Brass--Sharifi normalization enters the final universal-cover consequence.  The finite cover of \(\Oadm\) is introduced in Section~\ref{sec:certificate-model}, and the certificate proves
+Consequently, a uniform lower bound for \(\Area(\paramv)\) on \(\Oadm\) gives a lower bound for \(\area(K)\) for every convex universal cover \(K\).  This is the only point at which the Brass--Sharifi normalization enters the final universal-cover consequence.  Thus the finite certificate begins after the normalization and symmetry reductions of Brass--Sharifi have been accepted as input.  The finite cover of \(\Oadm\) is introduced in Section~\ref{sec:certificate-model}, and the certificate proves
 \[
-\Area(\paramv)\ge\target\qquad(\paramv\in\Oadm),
+\Area(\paramv)\ge\target\qquad(\paramv\in\Oadm).
 \]
-and the convex universal-cover consequence is proved in Section~\ref{sec:theorem}.
+The convex universal-cover consequence is proved in Section~\ref{sec:theorem}.
 
 \section{The finite certificate model}\label{sec:certificate-model}
 
@@ -174,14 +179,22 @@ Section~\ref{sec:local-sources} separates the cover according to how the value \
 
 \subsection{Evidence records and interval enclosures}
 
-Each local assertion is accompanied by finite evidence.  The record families are summarized in Table~\ref{tab:record-families}.
+Each local assertion is accompanied by finite evidence.  The record families are summarized in Table~\ref{tab:record-families}.  The names ``directed interval'', ``tensor'', ``bridge'', and ``witness'' are record-class labels in the finite archive; their role in the proof is only the local inequality displayed in the last column.
 
 \begin{table}[H]
 \centering
 \caption{Certificate record families and their local lower-bound interfaces.}
 \label{tab:record-families}
 \small
-\begin{tabularx}{0.96\textwidth}{@{}>{\raggedright\arraybackslash}p{0.22\textwidth}X>{\raggedright\arraybackslash}p{0.28\textwidth}@{}}
+\begin{tabularx}{0.98\textwidth}{
+    @{\hspace{0.02\textwidth}}          % left-edge padding
+    m{0.27\textwidth}                   % first column: left aligned and vertically centered
+    @{\hspace{0.03\textwidth}}          % inter-column spacing
+    X                                   % second column: left aligned and vertically centered
+    @{\hspace{0.03\textwidth}}          % inter-column spacing
+    >{\raggedleft\arraybackslash}m{0.20\textwidth}   % third column: right aligned and vertically centered
+    @{\hspace{0.02\textwidth}}          % right-edge padding
+}
 \toprule
 Record family & Role in the proof & Local interface \\
 \midrule
@@ -193,7 +206,7 @@ witness records & Ordered witness polygons and interval area lower bounds. & \(\
 \end{tabularx}
 \end{table}
 
-All supporting record families enter the proof only through certified values \(L_B\ge\target\).  The use of individual evidence records ties each local assertion in the cover to a checked record, rather than only to an aggregate count.
+Here \(L_B^{\mathrm{wit}}\) denotes the witness-domain lower endpoint introduced in Section~\ref{sec:local-sources}.  All supporting record families enter the proof only through certified values \(L_B\ge\target\).  The use of individual evidence records ties each local assertion in the cover to a checked record, rather than only to an aggregate count.
 
 The numerical records use outward-rounded interval arithmetic.  Each coordinate, determinant, and shoelace expression is evaluated in an interval enclosure rounded outward, so a recorded lower endpoint is a rigorous lower bound under the stated interval model.  This is the standard principle of interval arithmetic; see Moore~\cite{moore}.
 
@@ -232,7 +245,7 @@ Fix \(B\in\Fwit\).  A witness family on \(B\) is an ordered list of point functi
 \[
 q_1(\paramv),q_2(\paramv),\ldots,q_{m_B}(\paramv).
 \]
-We denote the underlying set of these witness points by
+Here \(m_B\) denotes the number of witness vertices stored for the domain \(B\).  We denote the underlying set of these witness points by
 \[
 Q_B(\paramv)=\{q_1(\paramv),\ldots,q_{m_B}(\paramv)\}.
 \]
@@ -249,11 +262,11 @@ The certificate also stores a prescribed cyclic order of the witness points.  Le
 \[
 q_1(\paramv),q_2(\paramv),\ldots,q_{m_B}(\paramv).
 \]
-The certificate includes a convex-order audit for this prescribed order.  In this context, the audit is a finite check that fixes the cyclic boundary order of the recorded vertices and rules out order changes or crossing degeneracies on the whole parameter domain.  The determinant estimates of Section~\ref{sec:interval} are not used alone to infer global simplicity from consecutive turns; rather, they certify the stability of this audited order.  Together, the convex-order audit and the determinant estimates certify that the ordered polygonal region is simple and positively oriented throughout \(B\).
+The certificate includes a convex-order audit for this prescribed order.  In this context, the audit is a finite check that fixes the cyclic boundary order of the recorded vertices and rules out order changes or crossing degeneracies on the whole parameter domain.  In the archive this audit is stored as finite sign and separation data attached to the same parameter domain \(B\).  The determinant estimates of Section~\ref{sec:interval} are not used alone to infer global simplicity from consecutive turns; rather, they certify the stability of this audited order.  Together, the convex-order audit and the determinant estimates certify that the ordered polygonal region is simple and positively oriented throughout \(B\).
 
-All vertices of \(\mathcal P_B(\paramv)\), equivalently all points of \(Q_B(\paramv)\), lie in \(X(\paramv)\subseteq\Hull(\paramv)\).  Since \(\Hull(\paramv)\) is convex and \(\mathcal P_B(\paramv)\) is the polygonal region spanned by these ordered vertices,
+All vertices of \(\mathcal P_B(\paramv)\), equivalently all points of \(Q_B(\paramv)\), lie in \(X(\paramv)\subseteq\Hull(\paramv)\).  Since \(\Hull(\paramv)\) is convex and \(\mathcal P_B(\paramv)\) is the polygonal region bounded by these ordered vertices,
 \[
-\mathcal P_B(\paramv)\subseteq\Hull(\paramv).
+\mathcal P_B(\paramv)\subseteq\conv Q_B(\paramv)\subseteq\Hull(\paramv).
 \]
 
 \subsection{The inner-witness lower-bound lemma}
@@ -320,7 +333,7 @@ S_B(\paramv)=
 \bigl(x_i(\paramv)y_{i+1}(\paramv)-x_{i+1}(\paramv)y_i(\paramv)\bigr),
 \qquad q_{m_B+1}=q_1
 \]
-by cyclic convention.  Since \(\mathcal P_B(\paramv)\) is certified to be a simple positively oriented polygonal region, the shoelace formula gives
+by cyclic convention; equivalently, \((x_{m_B+1},y_{m_B+1})=(x_1,y_1)\).  Since \(\mathcal P_B(\paramv)\) is certified to be a simple positively oriented polygonal region, the shoelace formula gives
 \[
 \area(\mathcal P_B(\paramv))=\frac12 S_B(\paramv).
 \]
@@ -362,6 +375,8 @@ Since \(\paramv\) was arbitrary, the inequality holds on \(\Oadm\).
 
 \subsection{Verification of the bundled certificate}
 
+The labels OB-A--OB-F refer to the finite proof obligations listed in Table~\ref{tab:obligations}.
+
 \begin{proposition}[Verification of the bundled certificate]\label{prop:bundled-certificate}
 The certificate archive accompanying this paper satisfies the finite certificate conditions OB-A--OB-F listed in Table~\ref{tab:obligations} for the threshold \(\target\).
 \end{proposition}
@@ -374,7 +389,7 @@ The accompanying finite records are organized into four components summarized in
 \item witness records, which provide point containment, convex-order audit, determinant lower bounds, and shoelace lower endpoints on the witness domains;
 \item final verification records, which connect the cover-level proof obligations to the stated convex claim boundary.
 \end{itemize}
-The hash manifest fixes the record contents used for these checks.  The bundled records satisfy all listed conditions, so OB-A--OB-F hold for \(\target\).
+The public verification commands check the fixed SHA256 manifest and the following recorded predicates: required archive members; schema and row-count invariants; per-record pass fields; positivity of recorded surplus fields where they occur; zero final blockers; and agreement of the final aggregation gate with the stated convex claim boundary.  These are finite-record checks on the archived certificate data; they do not regenerate the geometric search that produced the records.  These finite predicates are the certificate-side representatives of OB-A--OB-F, and the bundled records satisfy them for \(\target\).
 \end{proof}
 
 \subsection{Certified lower-bound theorem}
@@ -410,17 +425,17 @@ Theorem~\ref{thm:certificate} gives \(\Area(\paramv)\ge\target\).  Hence \(\area
 
 \section{Conclusion}
 
-The finite certificate proves \(\Area(\paramv)\ge\target\) on the admissible normalized three-test-set domain.  The threshold \(\target=0.833\) is obtained in the same convex three-test-set framework as the Brass--Sharifi threshold \(0.832\).  The increment is small in raw area but closes approximately \(8.3\%\) of the interval between the Brass--Sharifi lower bound and Gibbs' convex upper bound.
+The finite certificate proves \(\Area(\paramv)\ge\target\) on the admissible normalized three-test-set domain, with \(\target=0.833\).  The result is obtained in the same convex three-test-set framework as the Brass--Sharifi threshold \(0.832\).
 
-The proof proceeds by finite covering.  The admissible domain is covered by finitely many parameter domains, each equipped with a local lower-bound certificate.  On the witness domains, the certificate uses ordered inner-witness polygonal regions whose areas are bounded below by interval orientation and shoelace estimates.  The remaining domains enter through supporting local records.  The finite-cover proposition then yields the convex universal-cover consequence \(\acvx\ge0.833\).
+The proof proceeds by finite covering.  Each parameter domain carries either a supporting local record or an ordered inner-witness polygonal record with interval orientation and shoelace lower bounds.  The finite-cover proposition then yields the convex universal-cover consequence \(\acvx\ge0.833\).
 
-The statement proved here is the convex lower-bound consequence obtained within the stated Brass--Sharifi three-test-set certificate model.  It is not a statement about the unrestricted nonconvex problem, nor is it a proof-assistant formalization.
+The statement proved here is the convex lower-bound consequence obtained within the stated Brass--Sharifi three-test-set certificate model.  It is not a statement about the unrestricted nonconvex problem, and it is not a proof-assistant formalization.
 
 \paragraph{Certificate archive and verification code.}
 The certificate records and verification code accompanying this paper are available from the project repository.\footnote{\url{https://github.com/Sheldon-Anderson/lebesgue-universal-cover-new-lower-bound-certificate}}
 
 \section*{Acknowledgements}
-The author used ChatGPT for editorial assistance.  All mathematical claims, computations, certificate judgments, and final text are the responsibility of the author.
+The author used software-assisted editorial tools for copyediting.  All mathematical claims, computations, certificate judgments, and final text are the responsibility of the author.
 
 {\small
 \begin{thebibliography}{9}
@@ -456,12 +471,21 @@ Prentice-Hall, Englewood Cliffs, NJ, 1966.
 \section{Finite certificate data}
 \label{app:data}
 
+% Table A.1 layout.
 \begin{table}[H]
 \centering
 \caption{Finite certificate components.}
 \label{tab:component-summary}
 \small
-\begin{tabularx}{0.94\textwidth}{@{}>{\raggedright\arraybackslash}p{0.34\textwidth}>{\raggedleft\arraybackslash}p{0.15\textwidth}X@{}}
+\begin{tabularx}{0.94\textwidth}{
+    @{\hspace{0.02\textwidth}}          % left-edge padding
+    m{0.23\textwidth}                   % first column: left aligned and vertically centered
+    @{\hspace{0.12\textwidth}}          % enlarged first-to-second-column spacing
+    >{\centering\arraybackslash}m{0.13\textwidth}   % second column: horizontally centered and vertically centered
+    @{\hspace{0.02\textwidth}}          % reduced second-to-third-column spacing
+    >{\raggedleft\arraybackslash}X      % third column: right aligned and vertically centered
+    @{\hspace{0.02\textwidth}}          % right-edge padding
+}
 \toprule
 Component & Quantity & Role \\
 \midrule
@@ -474,12 +498,23 @@ witness domains & 16 & witness-domain local bounds \\
 \end{tabularx}
 \end{table}
 
+The labels OB-A--OB-F denote the proof obligations discharged by the final aggregation record.
+
+% Table A.2 layout.
 \begin{table}[H]
 \centering
 \caption{Finite certificate conditions.}
 \label{tab:obligations}
 \small
-\begin{tabularx}{0.97\textwidth}{@{}>{\raggedright\arraybackslash}p{0.10\textwidth}X>{\raggedright\arraybackslash}p{0.34\textwidth}@{}}
+\begin{tabularx}{0.97\textwidth}{
+    @{\hspace{0.02\textwidth}}
+    m{0.10\textwidth}                           % first column: left aligned and vertically centered
+    @{\hspace{0.0\textwidth}}
+    X                                           % second column: left aligned and vertically centered
+    @{\hspace{0.05\textwidth}}
+    X                                           % third column: left aligned and vertically centered
+    @{\hspace{0.02\textwidth}}
+}
 \toprule
 Group & Mathematical assertion & Certificate component / verification record \\
 \midrule
@@ -487,18 +522,27 @@ OB-A & \(\Oadm\subseteq\bigcup_{B\in\Bcover}B\) & finite-cover records \\
 OB-B & supporting domains satisfy local lower bounds & per-record evidence and construction audit \\
 OB-C & witness domains satisfy local lower bounds & witness construction \\
 OB-D & every used local record has individual evidence & per-record evidence \\
-OB-E & interval endpoints clear \(\target\) & construction, witness, and final adjudication interval records \\
-OB-F & final aggregation matches the convex claim & final adjudication, final aggregation, and claim-boundary records \\
+OB-E & interval endpoints clear \(\target\) & construction, witness, and final verification interval records \\
+OB-F & final aggregation matches the convex claim & final verification, final aggregation, and claim-boundary records \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
+% Table A.3 layout.
 \begin{table}[H]
 \centering
 \caption{Final verification record summary.}
 \label{tab:final-adjudication-summary}
 \small
-\begin{tabularx}{0.97\textwidth}{@{}>{\raggedright\arraybackslash}p{0.29\textwidth}>{\raggedleft\arraybackslash}p{0.13\textwidth}X@{}}
+\begin{tabularx}{0.97\textwidth}{
+    @{\hspace{0.02\textwidth}}          % left-edge padding
+    m{0.26\textwidth}                   % first column: left aligned and vertically centered
+    @{\hspace{0.06\textwidth}}          % enlarged first-to-second-column spacing
+    >{\centering\arraybackslash}m{0.12\textwidth}   % second column: horizontally centered and vertically centered
+    @{\hspace{0.02\textwidth}}          % reduced second-to-third-column spacing
+    >{\raggedleft\arraybackslash}X      % third column: right aligned and vertically centered
+    @{\hspace{0.02\textwidth}}          % right-edge padding
+}
 \toprule
 Record class & Quantity & Role \\
 \midrule
@@ -522,7 +566,13 @@ final blockers & 0 & unresolved records after final verification \\
 \caption{Witness-domain counts.}
 \label{tab:witness-counts}
 \small
-\begin{tabularx}{0.72\textwidth}{@{}>{\raggedright\arraybackslash}X>{\raggedleft\arraybackslash}p{0.22\textwidth}@{}}
+\begin{tabularx}{0.72\textwidth}{
+    @{\hspace{0.02\textwidth}}          % left-edge padding
+    >{\raggedright\arraybackslash}X     % first column: left aligned and vertically centered
+    @{\hspace{0.03\textwidth}}          % inter-column spacing
+    >{\raggedleft\arraybackslash}m{0.22\textwidth}   % second column: right aligned and vertically centered
+    @{\hspace{0.02\textwidth}}          % right-edge padding
+}
 \toprule
 Quantity & Value \\
 \midrule
@@ -540,7 +590,13 @@ point-containment certificates & 2,112 / 2,112 \\
 \caption{Interval lower-bound summaries on the witness domains.}
 \label{tab:witness-bounds}
 \small
-\begin{tabularx}{0.82\textwidth}{@{}>{\raggedright\arraybackslash}X>{\raggedleft\arraybackslash}p{0.24\textwidth}@{}}
+\begin{tabularx}{0.82\textwidth}{
+    @{\hspace{0.02\textwidth}}          % left-edge padding
+    >{\raggedright\arraybackslash}X     % first column: left aligned and vertically centered
+    @{\hspace{0.03\textwidth}}          % inter-column spacing
+    >{\raggedleft\arraybackslash}m{0.24\textwidth}   % second column: right aligned and vertically centered
+    @{\hspace{0.02\textwidth}}          % right-edge padding
+}
 \toprule
 Quantity & Value \\
 \midrule

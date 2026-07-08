@@ -23,37 +23,26 @@ from ucbs.certificate.validation import (
     truthy,
     write_component_outputs,
 )
-
-REQUIRED_MEMBERS = [
-    "data/frozen_record_inventory.csv",
-    "data/final_replay_only_ledger.csv",
-]
-
-INVENTORY_COLUMNS = {
-    "freeze_component",
-    "final_adjudication_requirement",
-    "freeze_route_kind",
-    "freeze_route_status",
-    "rows",
-}
-REPLAY_COLUMNS = {
-    "replay_row",
-    "component",
-    "root_box_id",
-    "record_id",
-    "final_adjudication_requirement",
-    "freeze_route_kind",
-    "freeze_route_status",
-    "final_replay_status",
-    "final_replay_pass",
-}
-
-EXPECTED_INVENTORY_ROWS = 13
-EXPECTED_FROZEN_RECORDS = 3411
-EXPECTED_FINAL_REPLAY_ROWS = 2790
+from ucbs.config.certificate_spec import (
+    EXPECTED_FINAL_REPLAY_ROWS,
+    EXPECTED_FROZEN_RECORDS,
+    EXPECTED_INVENTORY_ROWS,
+    INVENTORY_COLUMNS,
+    FROZEN_RECORD_INVENTORY_MEMBER,
+    FINAL_REPLAY_ONLY_LEDGER_MEMBER,
+    PER_RECORD_REQUIRED_MEMBERS,
+    REPLAY_COLUMNS,
+)
 
 
 def _int_field(row: dict[str, str], field: str) -> int:
+    """Parse a nonnegative integer field from a CSV row.
+
+    Missing or malformed values are treated as zero so the caller can report a
+    deterministic aggregate-count failure instead of raising during diagnostic
+    generation. The certificate check still fails whenever the aggregate count
+    differs from the configured frozen-record count.
+    """
     try:
         return int(str(row.get(field, "0") or "0"))
     except ValueError:
@@ -69,13 +58,13 @@ def check_per_record_evidence(root: Path, archive: str | Path) -> ComponentRepor
         return ComponentReport("per_record_evidence", False, checks, {"per_record_evidence_passed": False})
 
     checks.append(check_row("archive_exists", True, relative_label(root, path), "archive is present"))
-    member_rows = require_members(path, REQUIRED_MEMBERS)
+    member_rows = require_members(path, list(PER_RECORD_REQUIRED_MEMBERS))
     checks.extend(member_rows)
     if not all(truthy(row.get("passed")) for row in member_rows):
         return ComponentReport("per_record_evidence", False, checks, {"per_record_evidence_passed": False})
 
-    inventory = read_csv_member(path, "data/frozen_record_inventory.csv")
-    replay = read_csv_member(path, "data/final_replay_only_ledger.csv")
+    inventory = read_csv_member(path, FROZEN_RECORD_INVENTORY_MEMBER)
+    replay = read_csv_member(path, FINAL_REPLAY_ONLY_LEDGER_MEMBER)
 
     checks.extend(require_columns(inventory, INVENTORY_COLUMNS, "frozen_record_inventory"))
     checks.extend(require_columns(replay, REPLAY_COLUMNS, "final_replay_only_ledger"))

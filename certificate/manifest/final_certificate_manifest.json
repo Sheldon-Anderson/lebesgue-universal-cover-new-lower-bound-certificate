@@ -10,8 +10,8 @@
     },
     {
       "path": "certificate/final_chain/final_adjudication_feedback.zip",
-      "sha256": "dbdb97d2b7c8246e3f0bd0e62197e61e018966c69d8c23829269f02fd97a2d7f",
-      "size_bytes": 19920
+      "sha256": "2e15a79186b81c85f36f299ba4a11485df20b74b84848096799098f0343ea613",
+      "size_bytes": 19921
     },
     {
       "path": "certificate/final_chain/per_record_evidence_feedback.zip",
@@ -35,8 +35,8 @@
     },
     {
       "path": "certificate/public/REPLAY_COMMANDS.md",
-      "sha256": "614a6f6c0fd377a0331705760ace6e8773ab84e0433273723fd5136489644ce1",
-      "size_bytes": 593
+      "sha256": "9884624226e53ed192c60c69d222e6c5ec5b5138a920fbac903d993800b36afd",
+      "size_bytes": 719
     },
     {
       "path": "certificate/public/THEOREM_READY_SUMMARY.md",
@@ -100,8 +100,8 @@
     },
     {
       "path": "certificate/public/status/claim_freeze.status.json",
-      "sha256": "9d85128b8425b315d53db7b2c1ef0a7cb94b326188c9d8e1aa7633abe9508fee",
-      "size_bytes": 349
+      "sha256": "06acddd6f9ef62d860ac6cfc3d931c61e70a79d9a6fb4fb51cb76bd4ebc25095",
+      "size_bytes": 350
     },
     {
       "path": "certificate/public/status/final_adjudication.status.json",

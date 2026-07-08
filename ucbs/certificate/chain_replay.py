@@ -7,6 +7,7 @@ from pathlib import Path
 from ucbs.certificate.construction_audit import check_construction_audit
 from ucbs.certificate.final_adjudication import check_final_adjudication
 from ucbs.certificate.per_record_evidence import check_per_record_evidence
+from ucbs.cli.logging import close_run_log, start_run_log
 from ucbs.certificate.validation import (
     CERTIFIED_THRESHOLD_TEXT,
     ComponentReport,
@@ -21,7 +22,12 @@ from ucbs.certificate.validation import (
     write_json,
 )
 from ucbs.certificate.witness_construction import check_witness_construction
-from ucbs.verification.artifact_checks import CertificateInputs, check_required_inputs, resolve_inputs
+from ucbs.verification.artifact_checks import (
+    CertificateInputs,
+    check_required_inputs,
+    resolve_inputs,
+    verify_key_artifact_hashes,
+)
 
 
 @dataclass(frozen=True)
@@ -32,10 +38,18 @@ class CertificateVerificationResult:
     certificate_verified: bool
     threshold_proved: bool
     failed_component_count: int
+    artifact_hashes_verified: bool
     output_feedback: Path
 
 
 def _component_row(report: ComponentReport) -> dict[str, object]:
+    """Convert one component report into a stable diagnostic summary row.
+
+    The repository and certificate-chain replays write component-level CSV files.
+    This helper keeps the row schema identical for all four components while
+    retaining the component name and pass/fail status needed by downstream
+    summary checks.
+    """
     return {
         "check": report.name,
         "component": report.name,
@@ -67,22 +81,28 @@ def write_chain_replay(
     root = Path(root).resolve()
     run_dir = clean_run_dir(root, run_id, ["diagnostics", "status", "log", "report"])
     log = run_dir / "log" / "certificate_chain_replay.log"
-    log.write_text(
-        f"certificate-chain replay started {now_utc()}\n"
-        "root=<repository-root>\n"
-        f"run_id={run_id}\n"
-        f"log_level={log_level}\n"
-        f"inputs={inputs.as_jsonable()}\n",
-        encoding="utf-8",
+    start_run_log(
+        log,
+        [
+            "certificate-chain replay started",
+            "root=<repository-root>",
+            f"run_id={run_id}",
+            f"log_level={log_level}",
+            f"inputs={inputs.as_jsonable()}",
+        ],
+        level=log_level,
     )
 
     input_rows = check_required_inputs(root, inputs)
     write_csv(run_dir / "diagnostics" / "input_artifact_audit.csv", with_summary("input_artifact_audit", input_rows, "input archives are present", "input archive issue found"))
-    if failed_rows(input_rows):
+    hash_rows = verify_key_artifact_hashes(root)
+    write_csv(run_dir / "diagnostics" / "artifact_hash_audit.csv", with_summary("artifact_hash_audit", hash_rows, "artifact hashes match the manifest", "artifact hash issue found"))
+    if failed_rows(input_rows) or failed_rows(hash_rows):
         reports: list[ComponentReport] = []
-        component_rows = [check_row("input_artifacts", False, len(failed_rows(input_rows)), "required input archive is missing")]
+        issue_count = len(failed_rows(input_rows)) + len(failed_rows(hash_rows))
+        component_rows = [check_row("input_artifacts_or_hashes", False, issue_count, "required input archive or artifact hash audit failed")]
     else:
-        append_log(log, "running component checks")
+        append_log(log, "running component checks", level=log_level)
         reports = run_chain_checks(root, inputs)
         component_rows = [_component_row(report) for report in reports]
         for report in reports:
@@ -97,7 +117,8 @@ def write_chain_replay(
     )
 
     failed_component_count = sum(1 for row in component_rows if not str(row.get("check", "")).endswith("_summary") and not bool(row.get("passed")))
-    passed = failed_component_count == 0 and not failed_rows(input_rows)
+    artifact_hashes_verified = not failed_rows(hash_rows)
+    passed = failed_component_count == 0 and not failed_rows(input_rows) and artifact_hashes_verified
     status_payload = {
         "schema": "ucbs-certificate-chain-replay-v1",
         "status": "passed" if passed else "failed",
@@ -108,6 +129,7 @@ def write_chain_replay(
         "timestamp_utc": now_utc(),
         "component_count": 4,
         "failed_component_count": failed_component_count,
+        "artifact_hashes_verified": artifact_hashes_verified,
         "per_record_evidence_passed": any(report.name == "per_record_evidence" and report.passed for report in reports),
         "construction_audit_passed": any(report.name == "construction_audit" and report.passed for report in reports),
         "witness_construction_passed": any(report.name == "witness_construction" and report.passed for report in reports),
@@ -119,10 +141,12 @@ def write_chain_replay(
     (run_dir / "report" / "certificate_chain_replay.md").write_text(
         "# Certificate-chain replay\n\n"
         f"Status: `{'passed' if passed else 'failed'}`.\n\n"
-        f"Certified threshold: `{CERTIFIED_THRESHOLD_TEXT}`.\n",
+        f"Certified threshold: `{CERTIFIED_THRESHOLD_TEXT}`.\n\n"
+        f"Artifact hashes verified: `{'true' if artifact_hashes_verified else 'false'}`.\n",
         encoding="utf-8",
     )
-    append_log(log, f"certificate-chain replay status={'passed' if passed else 'failed'}")
+    append_log(log, f"certificate-chain replay status={'passed' if passed else 'failed'}", level=log_level)
+    close_run_log(log)
     return make_feedback_zip(run_dir, feedback_name)
 
 
@@ -139,7 +163,6 @@ def verify_certificate(
     """Run the public certificate verification and write feedback."""
     root = Path(root).resolve()
     inputs = resolve_inputs(
-        root,
         artifact_root,
         per_record_evidence_zip=per_record_evidence_zip,
         construction_audit_zip=construction_audit_zip,
@@ -148,19 +171,25 @@ def verify_certificate(
     )
     run_dir = clean_run_dir(root, run_id, ["diagnostics", "status", "log", "report"])
     log = run_dir / "log" / "certificate_verification.log"
-    log.write_text(
-        f"certificate verification started {now_utc()}\n"
-        "root=<repository-root>\n"
-        f"run_id={run_id}\n"
-        f"log_level={log_level}\n"
-        f"inputs={inputs.as_jsonable()}\n",
-        encoding="utf-8",
+    start_run_log(
+        log,
+        [
+            "certificate verification started",
+            "root=<repository-root>",
+            f"run_id={run_id}",
+            f"log_level={log_level}",
+            f"inputs={inputs.as_jsonable()}",
+        ],
+        level=log_level,
     )
 
     input_rows = check_required_inputs(root, inputs)
     write_csv(run_dir / "diagnostics" / "input_artifact_audit.csv", with_summary("input_artifact_audit", input_rows, "input archives are present", "input archive issue found"))
-    reports = [] if failed_rows(input_rows) else run_chain_checks(root, inputs)
-    component_rows = [_component_row(report) for report in reports] if reports else [check_row("input_artifacts", False, len(failed_rows(input_rows)), "required input archive is missing")]
+    hash_rows = verify_key_artifact_hashes(root)
+    write_csv(run_dir / "diagnostics" / "artifact_hash_audit.csv", with_summary("artifact_hash_audit", hash_rows, "artifact hashes match the manifest", "artifact hash issue found"))
+    precheck_failed = bool(failed_rows(input_rows) or failed_rows(hash_rows))
+    reports = [] if precheck_failed else run_chain_checks(root, inputs)
+    component_rows = [_component_row(report) for report in reports] if reports else [check_row("input_artifacts_or_hashes", False, len(failed_rows(input_rows)) + len(failed_rows(hash_rows)), "required input archive or artifact hash audit failed")]
     component_rows = with_summary("component_checks", component_rows, "all certificate-chain components passed", "certificate-chain component failed")
     write_csv(run_dir / "diagnostics" / "component_checks.csv", component_rows)
     for report in reports:
@@ -171,7 +200,8 @@ def verify_certificate(
         failed if failed else [{"check": "failed_component_checks_summary", "issue_count": 0, "passed": True, "summary": "no failed component check found"}],
     )
     failed_component_count = sum(1 for row in component_rows if not str(row.get("check", "")).endswith("_summary") and not bool(row.get("passed")))
-    passed = failed_component_count == 0 and not failed_rows(input_rows)
+    artifact_hashes_verified = not failed_rows(hash_rows)
+    passed = failed_component_count == 0 and not failed_rows(input_rows) and artifact_hashes_verified
     status_payload = {
         "schema": "ucbs-certificate-verification-v1",
         "status": "passed" if passed else "failed",
@@ -182,6 +212,7 @@ def verify_certificate(
         "timestamp_utc": now_utc(),
         "component_count": 4,
         "failed_component_count": failed_component_count,
+        "artifact_hashes_verified": artifact_hashes_verified,
         "per_record_evidence_passed": any(report.name == "per_record_evidence" and report.passed for report in reports),
         "construction_audit_passed": any(report.name == "construction_audit" and report.passed for report in reports),
         "witness_construction_passed": any(report.name == "witness_construction" and report.passed for report in reports),
@@ -193,14 +224,16 @@ def verify_certificate(
     (run_dir / "report" / "certificate_verification.md").write_text(
         "# Certificate verification\n\n"
         f"Status: `{'passed' if passed else 'failed'}`.\n\n"
-        f"Certified threshold: `{CERTIFIED_THRESHOLD_TEXT}`.\n",
+        f"Certified threshold: `{CERTIFIED_THRESHOLD_TEXT}`.\n\n"
+        f"Artifact hashes verified: `{'true' if artifact_hashes_verified else 'false'}`.\n",
         encoding="utf-8",
     )
-    append_log(log, f"certificate verification status={'passed' if passed else 'failed'}")
+    append_log(log, f"certificate verification status={'passed' if passed else 'failed'}", level=log_level)
+    close_run_log(log)
     feedback = make_feedback_zip(run_dir, "certificate_verification_feedback.zip")
-    return CertificateVerificationResult("passed" if passed else "failed", passed, passed, failed_component_count, feedback)
+    return CertificateVerificationResult("passed" if passed else "failed", passed, passed, failed_component_count, artifact_hashes_verified, feedback)
 
 
-def resolve_default_inputs(root: Path, artifact_root: str | None = None, **kwargs: str | None) -> CertificateInputs:
+def resolve_default_inputs(artifact_root: str | None = None, **kwargs: str | None) -> CertificateInputs:
     """Convenience wrapper around the public artifact resolver."""
-    return resolve_inputs(root, artifact_root, **kwargs)
+    return resolve_inputs(artifact_root, **kwargs)

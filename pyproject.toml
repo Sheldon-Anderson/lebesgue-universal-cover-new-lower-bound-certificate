@@ -1,6 +1,6 @@
 [project]
 name = "lebesgue-universal-cover-new-lower-bound-certificate"
-version = "0.15.2"
+version = "0.15.4"
 description = "Finite certificate package for a certified lower bound in the convex Brass-Sharifi certificate setting."
 readme = "README.md"
 license = { text = "MIT" }
@@ -17,7 +17,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "loguru>=0.7.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

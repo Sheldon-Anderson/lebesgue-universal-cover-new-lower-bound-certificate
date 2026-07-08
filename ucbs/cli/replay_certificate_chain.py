@@ -37,7 +37,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     root = Path(args.root).resolve()
     inputs = resolve_default_inputs(
-        root,
         args.artifact_root,
         per_record_evidence_zip=args.per_record_evidence_zip,
         construction_audit_zip=args.construction_audit_zip,
@@ -56,6 +55,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         {
             "status": status["status"],
             "failed_component_count": status["failed_component_count"],
+            "artifact_hashes_verified": status.get("artifact_hashes_verified", False),
             "feedback": str(feedback),
         }
     )

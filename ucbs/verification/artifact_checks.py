@@ -6,12 +6,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_ARTIFACT_ROOT = Path("certificate") / "final_chain"
-DEFAULT_PER_RECORD_EVIDENCE = "per_record_evidence_feedback.zip"
-DEFAULT_CONSTRUCTION_AUDIT = "construction_audit_feedback.zip"
-DEFAULT_WITNESS_CONSTRUCTION = "witness_construction_feedback.zip"
-DEFAULT_FINAL_ADJUDICATION = "final_adjudication_feedback.zip"
-DEFAULT_MANIFEST = Path("certificate") / "manifest" / "key_artifacts_sha256.txt"
+from ucbs.config.certificate_spec import (
+    DEFAULT_ARTIFACT_ROOT,
+    DEFAULT_CONSTRUCTION_AUDIT,
+    DEFAULT_FINAL_ADJUDICATION,
+    DEFAULT_MANIFEST,
+    DEFAULT_PER_RECORD_EVIDENCE,
+    DEFAULT_WITNESS_CONSTRUCTION,
+)
 
 
 @dataclass(frozen=True)
@@ -39,15 +41,27 @@ def sha256_file(path: Path) -> str:
 
 
 def resolve_inputs(
-    root: Path,
     artifact_root: Optional[str] = None,
     per_record_evidence_zip: Optional[str] = None,
     construction_audit_zip: Optional[str] = None,
     witness_construction_zip: Optional[str] = None,
     final_adjudication_zip: Optional[str] = None,
 ) -> CertificateInputs:
-    """Resolve explicit or default certificate-chain input paths."""
-    del root
+    """Resolve explicit or default certificate-chain input paths.
+
+    Args:
+        artifact_root: Optional base directory for the four certificate-chain
+            archives. Relative values are interpreted later relative to the
+            repository root by ``full_path``.
+        per_record_evidence_zip: Optional explicit per-record evidence archive.
+        construction_audit_zip: Optional explicit construction-audit archive.
+        witness_construction_zip: Optional explicit witness archive.
+        final_adjudication_zip: Optional explicit final-adjudication archive.
+
+    Returns:
+        Resolved archive labels, preserving relative paths for portable status
+        files and logs.
+    """
     base = Path(artifact_root) if artifact_root else DEFAULT_ARTIFACT_ROOT
 
     def choose(explicit: Optional[str], default_name: str) -> Path:

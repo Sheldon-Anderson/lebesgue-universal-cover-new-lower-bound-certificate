@@ -1,8 +1,6 @@
 """Shared validation helpers for certificate-chain replay modules."""
 from __future__ import annotations
 
-import csv
-import json
 import shutil
 import zipfile
 from dataclasses import dataclass, field
@@ -11,14 +9,23 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
+from ucbs.cli.logging import close_run_log, log_to_file, start_run_log
+from ucbs.config.release_config import CERTIFIED_THRESHOLD, CERTIFIED_THRESHOLD_TEXT
+from ucbs.verification.diagnostics import (
+    check_row,
+    failed_rows,
+    truthy,
+    with_summary,
+    write_csv,
+    write_json,
+)
+
 DiagnosticRow = dict[str, Any]
 """One diagnostic row written to a CSV file."""
 
 CsvRow = dict[str, str]
 """One row read from a certificate CSV file."""
 
-CERTIFIED_THRESHOLD = Decimal("0.833")
-CERTIFIED_THRESHOLD_TEXT = "0.833"
 
 
 @dataclass
@@ -35,42 +42,6 @@ def now_utc() -> str:
     """Return an ISO-8601 UTC timestamp."""
     return datetime.now(timezone.utc).isoformat()
 
-
-def truthy(value: Any) -> bool:
-    """Interpret common serialized Boolean and status values."""
-    if value is True:
-        return True
-    if value is False or value is None:
-        return False
-    return str(value).strip().lower() in {
-        "true",
-        "1",
-        "yes",
-        "passed",
-        "pass",
-        "ok",
-        "closed",
-        "discharged",
-        "present",
-        "present_locked",
-    }
-
-
-def status_passed(value: Any) -> bool:
-    """Return whether a serialized status value is a passing status."""
-    return str(value).strip().lower() in {
-        "passed",
-        "pass",
-        "ok",
-        "closed",
-        "discharged",
-        "present",
-        "present_locked",
-        "empty",
-        "clean",
-        "success",
-        "success_gate_passed_for_final_adjudication",
-    }
 
 
 def to_decimal(value: Any) -> Decimal | None:
@@ -90,82 +61,44 @@ def threshold_cleared(value: Any, threshold: Decimal = CERTIFIED_THRESHOLD) -> b
     return parsed is not None and parsed >= threshold
 
 
-def check_row(
-    check: str,
-    passed: bool,
-    value: Any = "",
-    summary: str = "",
-    **extra: Any,
-) -> DiagnosticRow:
-    """Build one diagnostic row for a replay or repository-check table."""
-    row = {"check": check, "passed": bool(passed), "value": value, "summary": summary}
-    row.update(extra)
-    return row
+def positive_decimal(value: object) -> bool:
+    """Return whether a serialized decimal value is positive when present.
+
+    Empty strings are treated as acceptable because some ledger rows do not
+    carry a surplus field. Invalid numeric text is rejected.
+    """
+    text = str(value).strip()
+    if not text:
+        return True
+    parsed = to_decimal(text)
+    return parsed is not None and parsed > Decimal("0")
 
 
-def failed_rows(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Collect rows whose passed field is false-like."""
-    failed: list[dict[str, Any]] = []
-    for row in rows:
-        if "passed" in row and not truthy(row["passed"]):
-            failed.append(row)
-    return failed
+def has_numeric_surplus(rows: list[dict[str, str]], field: str = "min_surplus") -> bool:
+    """Return whether at least one row stores a non-empty numeric surplus."""
+    return any(str(row.get(field, "")).strip() for row in rows)
 
 
-def summary_row(
-    name: str,
-    rows: Iterable[DiagnosticRow],
-    ok: str,
-    bad: str,
-) -> DiagnosticRow:
-    """Return a standard summary row for a diagnostic table."""
-    failures = failed_rows(rows)
-    return {
-        "check": f"{name}_summary",
-        "issue_count": len(failures),
-        "passed": len(failures) == 0,
-        "summary": ok if not failures else bad,
-    }
+def all_pass(rows: list[dict[str, str]], field: str) -> bool:
+    """Return whether all rows have a truthy pass/status field.
+
+    Args:
+        rows: Certificate CSV rows. The table must be non-empty.
+        field: Field name containing serialized pass values.
+    """
+    return bool(rows) and all(truthy(row.get(field)) for row in rows)
 
 
-def with_summary(name: str, rows: list[dict[str, Any]], ok: str, bad: str) -> list[dict[str, Any]]:
-    """Append a standard summary row to diagnostic rows."""
-    return [*rows, summary_row(name, rows, ok, bad)]
 
+def append_log(path: Path, message: str, level: str = "INFO") -> None:
+    """Append one English log line with loguru.
 
-def write_csv(
-    path: Path,
-    rows: Iterable[DiagnosticRow],
-    fieldnames: list[str] | None = None,
-) -> None:
-    """Write rows to CSV with a deterministic header."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    rows = list(rows)
-    fields: list[str] = list(fieldnames or [])
-    for row in rows:
-        for key in row:
-            if key not in fields:
-                fields.append(key)
-    if not fields:
-        fields = ["check", "issue_count", "passed", "summary"]
-        rows = [{"check": "empty_summary", "issue_count": 0, "passed": True, "summary": "no rows produced"}]
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write JSON with stable formatting."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def append_log(path: Path, message: str) -> None:
-    """Append one timestamped line to a log file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(f"[{now_utc()}] {message}\n")
+    Args:
+        path: Destination log file.
+        message: English message to record.
+        level: Minimum log level requested by the command-line caller.
+    """
+    log_to_file(path, message, level=level)
 
 
 def clean_run_dir(root: Path, run_id: str, subdirs: Iterable[str]) -> Path:
@@ -286,16 +219,19 @@ def write_component_outputs(
     """
     run_dir = clean_run_dir(root, run_id, ["diagnostics", "status", "log", "report"])
     log_path = run_dir / "log" / log_name
-    log_path.write_text(
-        f"component replay started {now_utc()}\n"
-        "root=<repository-root>\n"
-        f"run_id={run_id}\n"
-        f"component={report.name}\n"
-        f"archive={archive_label}\n"
-        f"log_level={log_level}\n",
-        encoding="utf-8",
+    start_run_log(
+        log_path,
+        [
+            "component replay started",
+            "root=<repository-root>",
+            f"run_id={run_id}",
+            f"component={report.name}",
+            f"archive={archive_label}",
+            f"log_level={log_level}",
+        ],
+        level=log_level,
     )
-    append_log(log_path, f"component checks collected: {len(report.checks)}")
+    append_log(log_path, f"component checks collected: {len(report.checks)}", level=log_level)
     checks = with_summary(report.name, report.checks, f"{report.name} checks passed", f"{report.name} check failed")
     write_csv(run_dir / "diagnostics" / f"{report.name}_checks.csv", checks)
     failed = failed_rows(checks)
@@ -320,5 +256,6 @@ def write_component_outputs(
         f"Archive: `{archive_label}`.\n",
         encoding="utf-8",
     )
-    append_log(log_path, f"component status={'passed' if report.passed else 'failed'}")
+    append_log(log_path, f"component status={'passed' if report.passed else 'failed'}", level=log_level)
+    close_run_log(log_path)
     return make_feedback_zip(run_dir, feedback_name)

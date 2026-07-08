@@ -14,6 +14,7 @@ from ucbs.cli.common import (
     add_run_id_argument,
 )
 from ucbs.cli.output import emit_summary
+from ucbs.config.release_config import CERTIFIED_THRESHOLD_TEXT
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,8 +46,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             "status": result.status,
             "certificate_verified": result.certificate_verified,
             "threshold_proved": result.threshold_proved,
-            "certified_threshold": "0.833",
+            "certified_threshold": CERTIFIED_THRESHOLD_TEXT,
             "failed_component_count": result.failed_component_count,
+            "artifact_hashes_verified": result.artifact_hashes_verified,
             "feedback": str(result.output_feedback),
         }
     )

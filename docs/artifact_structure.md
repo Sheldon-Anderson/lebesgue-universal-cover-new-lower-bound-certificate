@@ -9,3 +9,5 @@ The public certificate records are stored under `certificate/`.
 | `certificate/public/` | Human-readable index, proof boundary, replay commands, and final status records. |
 
 The structure intentionally avoids embedding the certified threshold in directory or file names; the target appears in the file contents and verification status.
+
+Paper reproducibility is covered separately by `paper/source/`; the repository release check requires the LaTeX source files to be present.

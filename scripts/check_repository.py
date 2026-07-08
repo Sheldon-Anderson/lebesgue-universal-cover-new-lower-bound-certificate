@@ -2,6 +2,10 @@
 """Command-line entry point for ``ucbs.cli.check_repository``."""
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 from _bootstrap import ensure_repo_root_on_path
 
 ensure_repo_root_on_path()

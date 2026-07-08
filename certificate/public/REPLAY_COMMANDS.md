@@ -14,6 +14,7 @@ A successful run prints a JSON summary containing:
   "certificate_verified": true,
   "threshold_proved": true,
   "certified_threshold": "0.833",
+  "artifact_hashes_verified": true,
   "failed_component_count": 0
 }
 ```
@@ -28,4 +29,10 @@ For the repository-level release check, run:
 
 ```bash
 python scripts/check_repository.py --root . --log-level INFO
+```
+
+For release-maintenance tests, run:
+
+```bash
+python -B -m unittest discover -s tests
 ```

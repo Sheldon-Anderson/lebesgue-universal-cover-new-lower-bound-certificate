@@ -4,8 +4,8 @@ title: "A Certified Lower Bound for Lebesgue's Universal Cover Problem"
 authors:
   - family-names: Xie
     given-names: Niantao
-version: "release-candidate"
-date-released: "2026-07-01"
+version: "0.15.4"
+date-released: "2026-07-08"
 license: MIT
 repository-code: "https://github.com/Sheldon-Anderson/lebesgue-universal-cover-new-lower-bound-certificate"
 abstract: "Finite certificate records and deterministic replay code for a certified threshold of 0.833 in the convex Brass-Sharifi three-test-set framework."

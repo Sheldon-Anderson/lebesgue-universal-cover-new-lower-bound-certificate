@@ -11,6 +11,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+sys.dont_write_bytecode = True
+"""Direct source-tree wrappers must not create bytecode cache files."""
+
 
 def ensure_repo_root_on_path() -> None:
     """Make the repository root importable for direct script execution."""
